@@ -1,0 +1,2518 @@
+[
+   {
+      "acc" : {
+         "comment" : "справочник портфелей",
+         "table" : "ad_sub_accounts",
+         "keys" : [
+            "acc_code"
+         ],
+         "fields" : [
+            {
+               "acc_code" : {
+                  "comment" : "Портфель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "nick_name" : {
+                  "comment" : "Название портфеля.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "treaty" : {
+                  "comment" : "Счет.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "toy" : {
+                  "comment" : "Игровой («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_debet" : {
+                  "comment" : "Маржинальный («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "unsecured_limit" : {
+                  "comment" : "Необеспеченный лимит.",
+                  "type" : "float"
+               }
+            },
+            {
+               "start_margin" : {
+                  "comment" : "Начальный уровень маржи.",
+                  "type" : "float"
+               }
+            },
+            {
+               "msg_margin" : {
+                  "comment" : "Уведомительный уровень маржи.",
+                  "type" : "float"
+               }
+            },
+            {
+               "min_margin" : {
+                  "comment" : "Критический уровень маржи.",
+                  "type" : "float"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "acs" : {
+         "comment" : "справочник счетов",
+         "table" : "ad_accounts",
+         "keys" : [
+            "treaty"
+         ],
+         "fields" : [
+            {
+               "treaty" : {
+                  "comment" : "Номер счета.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "full_name" : {
+                  "comment" : "Полное название счета.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "start_margin" : {
+                  "comment" : "Начальный уровень маржи.",
+                  "type" : "float"
+               }
+            },
+            {
+               "msg_margin" : {
+                  "comment" : "Уведомительный уровень маржи.",
+                  "type" : "float"
+               }
+            },
+            {
+               "min_margin" : {
+                  "comment" : "Критический уровень маржи.",
+                  "type" : "float"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "act" : {
+         "comment" : "справочник активов",
+         "table" : "ad_actives",
+         "keys" : [
+            "p_code"
+         ],
+         "fields" : [
+            {
+               "p_code" : {
+                  "comment" : "Код финансового инструмента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "p_name" : {
+                  "comment" : "Название актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ANSI_name" : {
+                  "comment" : "Короткое название.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "expired" : {
+                  "comment" : "Просрочен («Y»- да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "serial_group" : {
+                  "comment" : "Группа.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "em_code" : {
+                  "comment" : "Код эмитента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "at_code" : {
+                  "comment" : "Код типа актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "emission_no" : {
+                  "comment" : "Номер эмиссии.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "transh_no" : {
+                  "comment" : "Номер транша.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "at_name" : {
+                  "comment" : "Название типа актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "reg_code" : {
+                  "comment" : "Регистрационный номер.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "buyback_price" : {
+                  "comment" : "Цена обратного выкупа.",
+                  "type" : "float"
+               }
+            },
+            {
+               "buyback_date" : {
+                  "comment" : "Дата обратного выкупа.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "nominal_curr" : {
+                  "comment" : "Валюта номинала.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "mult" : {
+                  "comment" : "Коэффициент умножения для определения цены базового актива.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "divid" : {
+                  "comment" : "Коэффициент деления для определения цены базового актива.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "strike" : {
+                  "comment" : "Strike-цена контракта.",
+                  "type" : "float"
+               }
+            },
+            {
+               "contr_descr" : {
+                  "comment" : "Описание типа контракта.",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "at" : {
+         "comment" : "текущие сделки на рынке",
+         "table" : "ad_my_current_trades",
+         "keys" : [
+            "trd_no"
+         ],
+         "fields" : [
+            {
+               "trd_no" : {
+                  "comment" : "Номер сделки на бирже.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "paper_no" : {
+                  "comment" : "Цифровой код финансового инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "qty" : {
+                  "comment" : "Количество.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "price" : {
+                  "comment" : "Цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "ts_time" : {
+                  "comment" : "Время торговой системы. XXX??? WHY VARCHAR",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "change" : {
+                  "comment" : "Направление изменения цены.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "type" : {
+                  "comment" : "Тип (внешний ключ таблицы trade_types).",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "bl" : {
+         "comment" : "позиции в разрезе рынков и портфелей",
+         "table" : "ad_balance",
+         "keys" : [
+            "acc_code",
+            "p_code",
+            "place_code"
+         ],
+         "fields" : [
+            {
+               "acc_code" : {
+                  "comment" : "Портфель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "p_code" : {
+                  "comment" : "Код актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "income_rest" : {
+                  "comment" : "Входящий остаток.",
+                  "type" : "float"
+               }
+            },
+            {
+               "real_rest" : {
+                  "comment" : "Текущий остаток.",
+                  "type" : "float"
+               }
+            },
+            {
+               "plan_rest" : {
+                  "comment" : "Плановый остаток.",
+                  "type" : "float"
+               }
+            },
+            {
+               "brutto_rest" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "turnover" : {
+                  "comment" : "Оборот.",
+                  "type" : "float"
+               }
+            },
+            {
+               "balance_price" : {
+                  "comment" : "Учетная цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "paper_no" : {
+                  "comment" : "Цифровой код финансового инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "forword_rest" : {
+                  "comment" : "Чистый остаток (позиция).",
+                  "type" : "float"
+               }
+            },
+            {
+               "assessed_price" : {
+                  "comment" : "Оценочная цена инструмента для позиции.",
+                  "type" : "float"
+               }
+            },
+            {
+               "real_vol" : {
+                  "comment" : "Текущая стоимость.",
+                  "type" : "float"
+               }
+            },
+            {
+               "forword_vol" : {
+                  "comment" : "Чистая стоимость.",
+                  "type" : "float"
+               }
+            },
+            {
+               "bal_forword_vol" : {
+                  "comment" : "Учетная стоимость.",
+                  "type" : "float"
+               }
+            },
+            {
+               "profit_vol" : {
+                  "comment" : "Нереализованные прибыль/убыток.",
+                  "type" : "float"
+               }
+            },
+            {
+               "treaty" : {
+                  "comment" : "Счет.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "prev_close" : {
+                  "comment" : "Входящая чистая позиция.",
+                  "type" : "float"
+               }
+            },
+            {
+               "in_bids" : {
+                  "comment" : "На покупку.",
+                  "type" : "float"
+               }
+            },
+            {
+               "in_offers" : {
+                  "comment" : "На продажу.",
+                  "type" : "float"
+               }
+            },
+            {
+               "netto_rest" : {
+                  "comment" : "Свободная позиция.",
+                  "type" : "float"
+               }
+            },
+            {
+               "nkd" : {
+                  "comment" : "Накопленный купонный доход.",
+                  "type" : "float"
+               }
+            },
+            {
+               "bought" : {
+                  "comment" : "Куплено.",
+                  "type" : "float"
+               }
+            },
+            {
+               "sold" : {
+                  "comment" : "Продано.",
+                  "type" : "float"
+               }
+            },
+            {
+               "daily_pl" : {
+                  "comment" : "Прибыль/убыток дневной.",
+                  "type" : "float"
+               }
+            },
+            {
+               "income_pl" : {
+                  "comment" : "Прибыль/убыток входящий.",
+                  "type" : "float"
+               }
+            },
+            {
+               "income_vol" : {
+                  "comment" : "Входящая стоимость.",
+                  "type" : "float"
+               }
+            },
+            {
+               "price_koef" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "reserved_for_backward_cap" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "pl" : {
+                  "comment" : "Прибыль/убыток.",
+                  "type" : "float"
+               }
+            },
+            {
+               "nkd_inc" : {
+                  "comment" : "Накопленный купонный доход (уплаченный).",
+                  "type" : "float"
+               }
+            },
+            {
+               "curr_rate" : {
+                  "comment" : "Курс валюты позиции относительно RUR.",
+                  "type" : "float"
+               }
+            },
+            {
+               "price_koef_pl" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "var_margin" : {
+                  "comment" : "Вариационная маржа.",
+                  "type" : "float"
+               }
+            },
+            {
+               "var_margin_pc" : {
+                  "comment" : "Вариационная маржа после пром. клиринга.",
+                  "type" : "float"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "brd" : {
+         "comment" : "справочник торговых разделов",
+         "table" : "ad_boards",
+         "keys" : [
+            "board_code"
+         ],
+         "fields" : [
+            {
+               "board_code" : {
+                  "comment" : "Код торгового раздела.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "board_name" : {
+                  "comment" : "Название торгового раздела.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "tax" : {
+                  "comment" : "Комиссия.",
+                  "type" : "float"
+               }
+            },
+            {
+               "price_type" : {
+                  "comment" : "Тип цены («%» - в процентах от номинала, «$» – в валюте котировки).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ct" : {
+         "comment" : "чат трейдеров",
+         "table" : "ad_my_chat",
+         "keys" : [
+            "mes_no"
+         ],
+         "fields" : [
+            {
+               "mes_no" : {
+                  "comment" : "Номер.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "to_sys_name" : {
+                  "comment" : "Получатель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "from_sys_name" : {
+                  "comment" : "Отправитель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "subject" : {
+                  "comment" : "Код комнаты.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "body" : {
+                  "comment" : "Тело сообщения.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "show_window" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "color" : {
+                  "comment" : "Код цвета.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "type" : {
+                  "comment" : "Код типа («U» - персональное, «A» - общее, «-» - удаленное).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "end_date" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "db_date" : {
+                  "comment" : "Время в формате «hh:mm:ss».",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "to_user_id" : {
+                  "comment" : "Id получателя.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "from_user_id" : {
+                  "comment" : "Id отправителя.",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ctm" : {
+         "comment" : "темы чата трейдеров",
+         "table" : "ad_chat_themes",
+         "keys" : [
+            "theme_code"
+         ],
+         "fields" : [
+            {
+               "theme_code" : {
+                  "comment" : "Код темы.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "theme_name" : {
+                  "comment" : "Название темы.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "disable_selection" : {
+                  "comment" : "Блокирована к посылке.",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "cur" : {
+         "comment" : "справочник валют",
+         "table" : "ad_curr",
+         "keys" : [
+            "curr_code"
+         ],
+         "fields" : [
+            {
+               "curr_code" : {
+                  "comment" : "Код валюты.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "curr_name" : {
+                  "comment" : "Название валюты.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ect" : {
+         "comment" : "справочник контрагентов",
+         "table" : "ad_exchange_contragents",
+         "keys" : [
+            "ex_code",
+            "firm_code"
+         ],
+         "fields" : [
+            {
+               "ex_code" : {
+                  "comment" : "Код биржи.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "firm_code" : {
+                  "comment" : "Код контрагента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "firm_name" : {
+                  "comment" : "Название контрагента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "status" : {
+                  "comment" : "Статус.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Рынок контрагента.",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "emt" : {
+         "comment" : "справочник эмитентов",
+         "table" : "ad_emitents",
+         "keys" : [
+            "em_code"
+         ],
+         "fields" : [
+            {
+               "em_code" : {
+                  "comment" : "Код.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "short_name" : {
+                  "comment" : "Название эмитента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "full_name" : {
+                  "comment" : "Полное название эмитента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "short_name_eng" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ind_code" : {
+                  "comment" : "Отрасль.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "www" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "country" : {
+                  "comment" : "Страна.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "exc" : {
+         "comment" : "справочник бирж",
+         "table" : "ad_exchanges",
+         "keys" : [
+            "ex_code"
+         ],
+         "fields" : [
+            {
+               "ex_code" : {
+                  "comment" : "Код биржи.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ex_name" : {
+                  "comment" : "Название биржи.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "country_code" : {
+                  "comment" : "Код страны.",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "finit" : {
+         "comment" : "котировки",
+         "table" : "ad_my_quotes",
+         "keys" : [
+            "paper_no"
+         ],
+         "fields" : [
+            {
+               "paper_no" : {
+                  "comment" : "Цифровой код финансового инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "open_price" : {
+                  "comment" : "Цена открытия.",
+                  "type" : "float"
+               }
+            },
+            {
+               "last_price" : {
+                  "comment" : "Последняя цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "avg_price" : {
+                  "comment" : "Средняя цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "close_price" : {
+                  "comment" : "Цена закрытия.",
+                  "type" : "float"
+               }
+            },
+            {
+               "change" : {
+                  "comment" : "Абсолютное изменение.",
+                  "type" : "float"
+               }
+            },
+            {
+               "max_deal" : {
+                  "comment" : "Максимальная цена сделки.",
+                  "type" : "float"
+               }
+            },
+            {
+               "min_deal" : {
+                  "comment" : "Минимальная цена сделки.",
+                  "type" : "float"
+               }
+            },
+            {
+               "sum_qty" : {
+                  "comment" : "Суммарное количество в сделках.",
+                  "type" : "float"
+               }
+            },
+            {
+               "sum_volume" : {
+                  "comment" : "Суммарный объем сделок.",
+                  "type" : "float"
+               }
+            },
+            {
+               "last_qty" : {
+                  "comment" : "Количество в последней сделке.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "no_deal" : {
+                  "comment" : "Количество сделок.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "sell_qty" : {
+                  "comment" : "Количество в лучшей продаже.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "buy_qty" : {
+                  "comment" : "Количество в лучшей покупке.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "sell" : {
+                  "comment" : "Цена лучшей продажи.",
+                  "type" : "float"
+               }
+            },
+            {
+               "buy" : {
+                  "comment" : "Цена лучшей покупки.",
+                  "type" : "float"
+               }
+            },
+            {
+               "reserved_backward_cap" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "high_bid" : {
+                  "comment" : "Максимальный спрос.",
+                  "type" : "float"
+               }
+            },
+            {
+               "low_offer" : {
+                  "comment" : "Минимальное предложение.",
+                  "type" : "float"
+               }
+            },
+            {
+               "prev_price" : {
+                  "comment" : "Цена предыдущей сделки.",
+                  "type" : "float"
+               }
+            },
+            {
+               "yield" : {
+                  "comment" : "Доходность.",
+                  "type" : "float"
+               }
+            },
+            {
+               "avg_yield" : {
+                  "comment" : "Средняя доходность.",
+                  "type" : "float"
+               }
+            },
+            {
+               "close_yield" : {
+                  "comment" : "Доходность по закрытию.",
+                  "type" : "float"
+               }
+            },
+            {
+               "price2prev_avg" : {
+                  "comment" : "Среднее изменение.",
+                  "type" : "float"
+               }
+            },
+            {
+               "buy_sqty" : {
+                  "comment" : "Суммарное количество на покупку.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "buy_count" : {
+                  "comment" : "Количество заявок на покупку.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "sell_sqty" : {
+                  "comment" : "Суммарное количество на продажу.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "sell_count" : {
+                  "comment" : "Количество заявок на продажу.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "status" : {
+                  "comment" : "Статус торгов.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "market_watch" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "euro_spread" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "open_pos_qty" : {
+                  "comment" : "Количество открытых позиций.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "volatility" : {
+                  "comment" : "Волатильность.",
+                  "type" : "float"
+               }
+            },
+            {
+               "theor_price" : {
+                  "comment" : "Теоретическая цена опциона.",
+                  "type" : "float"
+               }
+            },
+            {
+               "assessed_price" : {
+                  "comment" : "Оценочная цена позиций по инструменту.",
+                  "type" : "float"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "fst" : {
+         "comment" : "статус торгов",
+         "table" : "ad_paper_statuses",
+         "keys" : [
+            "status"
+         ],
+         "fields" : [
+            {
+               "status" : {
+                  "comment" : "Код статуса торгов.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "description" : {
+                  "comment" : "Описание статуса торгов.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "num_status" : {
+                  "comment" : "Цифровой код статуса торгов.",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "idt" : {
+         "comment" : "нестандартные даты",
+         "table" : "ad_abnormal_dates",
+         "keys" : [
+            "ab_date"
+         ],
+         "fields" : [
+            {
+               "ab_date" : {
+                  "comment" : "Дата.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ns" : {
+         "comment" : "новости",
+         "table" : "ad_news",
+         "keys" : [
+            "new_no"
+         ],
+         "fields" : [
+            {
+               "new_no" : {
+                  "comment" : "Номер.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "stripe_code" : {
+                  "comment" : "Код раздела.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "provider" : {
+                  "comment" : "Источник.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "db_data" : {
+                  "comment" : "Дата.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "topic" : {
+                  "comment" : "Раздел.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "subject" : {
+                  "comment" : "Текст новости.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "important" : {
+                  "comment" : "Важно («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ort" : {
+         "comment" : "справочник типов заявок",
+         "table" : "ad_my_request_types",
+         "keys" : [
+            "ord_type"
+         ],
+         "fields" : [
+            {
+               "ord_type" : {
+                  "comment" : "Код типа заявки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "description" : {
+                  "comment" : "Описание типа заявки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ost" : {
+         "comment" : "справочник статусов заявок",
+         "table" : "ad_order_statuses",
+         "keys" : [
+            "ord_status"
+         ],
+         "fields" : [
+            {
+               "ord_status" : {
+                  "comment" : "Код статуса заявки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "description" : {
+                  "comment" : "Описание статуса заявки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "pap" : {
+         "comment" : "справочник финансовых инструментов",
+         "table" : "ad_papers",
+         "keys" : [
+            "paper_no"
+         ],
+         "fields" : [
+            {
+               "paper_no" : {
+                  "comment" : "Цифровой код финансового инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "p_code" : {
+                  "comment" : "Код актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ts_p_code" : {
+                  "comment" : "Торговый код инструмента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "board_code" : {
+                  "comment" : "Код торгового раздела.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "lot_size" : {
+                  "comment" : "Размер лота.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "decimals" : {
+                  "comment" : "Количество знаков в дробной части.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "nkd" : {
+                  "comment" : "НКД.",
+                  "type" : "float"
+               }
+            },
+            {
+               "cup_size" : {
+                  "comment" : "Размер купона.",
+                  "type" : "float"
+               }
+            },
+            {
+               "cup_date" : {
+                  "comment" : "Купонная дата.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "cup_period" : {
+                  "comment" : "Купонный период.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "nominal" : {
+                  "comment" : "Номинал.",
+                  "type" : "float"
+               }
+            },
+            {
+               "mat_date" : {
+                  "comment" : "Дата погашения.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "allow_pawn" : {
+                  "comment" : "Идет в залог («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "sum_limit" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "expired" : {
+                  "comment" : "Просрочена («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_short" : {
+                  "comment" : "Возможна короткая позиция («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "firm_code" : {
+                  "comment" : "Контрагент.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "mk_short" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "mk_long" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "mk_short_min" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "mk_long_min" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "mk_short_repo" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "mk_long_repo" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "price_step" : {
+                  "comment" : "Шаг цены.",
+                  "type" : "float"
+               }
+            },
+            {
+               "create_date" : {
+                  "comment" : "Дата заведения инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "base_paper_no" : {
+                  "comment" : "Цифровой код базового финансового инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "just_inserted" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "integer"
+               }
+            },
+            {
+               "go_buy" : {
+                  "comment" : "Гарантийное обеспечение покупки.",
+                  "type" : "float"
+               }
+            },
+            {
+               "go_sell" : {
+                  "comment" : "Гарантийное обеспечение продажи.",
+                  "type" : "float"
+               }
+            },
+            {
+               "go_covered" : {
+                  "comment" : "Гарантийное обеспечение покрытое.",
+                  "type" : "float"
+               }
+            },
+            {
+               "go_uncovered" : {
+                  "comment" : "Гарантийное обеспечение непокрытое.",
+                  "type" : "float"
+               }
+            },
+            {
+               "price_step_cost" : {
+                  "comment" : "Стоимость шага цены.",
+                  "type" : "float"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "pos" : {
+         "comment" : "торговые разделы портфелей",
+         "table" : "ad_positions",
+         "keys" : [
+            "acc_code",
+            "place_code"
+         ],
+         "fields" : [
+            {
+               "acc_code" : {
+                  "comment" : "Портфель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "depo_acc" : {
+                  "comment" : "ДЕПО счет.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "qinit" : {
+         "comment" : "очереди заявок",
+         "table" : "ad_my_quote_queues",
+         "keys" : [
+            "paper_no"
+         ],
+         "fields" : [
+            {
+               "paper_no" : {
+                  "comment" : "Цифровой код финансового инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "price" : {
+                  "comment" : "Цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "buy_qty" : {
+                  "comment" : "Количество лотов на покупку.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "sell_qty" : {
+                  "comment" : "Количество лотов на продажу.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "yield" : {
+                  "comment" : "Доходность.",
+                  "type" : "float"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "rq" : {
+         "comment" : "заявки",
+         "table" : "ad_orders",
+         "keys" : [
+            "ord_no"
+         ],
+         "fields" : [
+            {
+               "ord_no" : {
+                  "comment" : "Номер.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "acc_code" : {
+                  "comment" : "Портфель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "type" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "status" : {
+                  "comment" : "Статус.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "b_s" : {
+                  "comment" : "Покупка/продажа («B» - покупка, «S» - продажа).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "price" : {
+                  "comment" : "Цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "qty" : {
+                  "comment" : "Количество.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "nkd" : {
+                  "comment" : "Накопленный купонный доход.",
+                  "type" : "float"
+               }
+            },
+            {
+               "rest" : {
+                  "comment" : "Остаток.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "rest_nkd" : {
+                  "comment" : "Накопленный купонный доход по остатку.",
+                  "type" : "float"
+               }
+            },
+            {
+               "portfolio" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ts_time" : {
+                  "comment" : "Время торговой системы.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "comments" : {
+                  "comment" : "Комментарии.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "p_code" : {
+                  "comment" : "Код актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "last_date" : {
+                  "comment" : "Дата истечения.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "stop_price" : {
+                  "comment" : "Стоп цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "price_curr" : {
+                  "comment" : "Валюта цены.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "non_exch" : {
+                  "comment" : "Биржевая («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "blank" : {
+                  "comment" : "Тип заявки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "actv_grow_price" : {
+                  "comment" : "Активировать, если цена вырастет.",
+                  "type" : "float"
+               }
+            },
+            {
+               "actv_down_price" : {
+                  "comment" : "Активировать, если цена упадет.",
+                  "type" : "float"
+               }
+            },
+            {
+               "actv_time" : {
+                  "comment" : "Активировать, когда наступит время.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "actv_kld_order_no" : {
+                  "comment" : "Активировать, если отменится заявка.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "actv_stld_order_no" : {
+                  "comment" : "Активировать, если выполнится заявка.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "drop_grow_price" : {
+                  "comment" : "Отменить, если цена вырастет.",
+                  "type" : "float"
+               }
+            },
+            {
+               "drop_down_price" : {
+                  "comment" : "Отменить, если цена упадет.",
+                  "type" : "float"
+               }
+            },
+            {
+               "drop_time" : {
+                  "comment" : "Отменить, когда наступит время.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "drop_kld_order_no" : {
+                  "comment" : "Отменить, если отменится заявка.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "drop_stld_order_no" : {
+                  "comment" : "Отменить, если выполнится заявка.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "updt_grow_price" : {
+                  "comment" : "Изменить, если цена вырастет.",
+                  "type" : "float"
+               }
+            },
+            {
+               "updt_down_price" : {
+                  "comment" : "Изменить, если цена упадет.",
+                  "type" : "float"
+               }
+            },
+            {
+               "updt_time" : {
+                  "comment" : "Изменить, когда наступит время.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "updt_kld_order_no" : {
+                  "comment" : "Изменить, если отменится заявка.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "updt_stld_order_no" : {
+                  "comment" : "Изменить, если выполнится заявка.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "updt_new_price" : {
+                  "comment" : "Новая цена исполнения.",
+                  "type" : "float"
+               }
+            },
+            {
+               "fee" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "rest_fee" : {
+                  "comment" : "Сборы и комиссии.",
+                  "type" : "float"
+               }
+            },
+            {
+               "volume" : {
+                  "comment" : "Сумма заявки.",
+                  "type" : "float"
+               }
+            },
+            {
+               "net_value" : {
+                  "comment" : "Нетто.",
+                  "type" : "float"
+               }
+            },
+            {
+               "firm_code" : {
+                  "comment" : "Код контрагента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "cupon_rate" : {
+                  "comment" : "Ставка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "trailing_level" : {
+                  "comment" : "Уровень для следящего стопа.",
+                  "type" : "float"
+               }
+            },
+            {
+               "trailing_slippage" : {
+                  "comment" : "Проскальзывание для следящего стопа.",
+                  "type" : "float"
+               }
+            },
+            {
+               "instr" : {
+                  "comment" : "Наличие дополнительных условий («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "treaty" : {
+                  "comment" : "Счет.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "sys_name" : {
+                  "comment" : "Инициатор.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "limits_check" : {
+                  "comment" : "Проверка лимитов при подачи поручения.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "init_price" : {
+                  "comment" : "Начальная цена стопа.",
+                  "type" : "float"
+               }
+            },
+            {
+               "ord_type" : {
+                  "comment" : "Тип заявки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "yield" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "repo_days" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "integer"
+               }
+            },
+            {
+               "repo_ammount" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "repo_discount" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "repo_ts_no" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "repo_low_discount" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "repo_high_discount" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "float"
+               }
+            },
+            {
+               "contragent_acc_code" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "templ" : {
+         "comment" : "шаблоны документов",
+         "table" : "ad_doc_templates",
+         "keys" : [
+            "doc_id"
+         ],
+         "fields" : [
+            {
+               "doc_id" : {
+                  "comment" : "Название шаблона.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "data" : {
+                  "comment" : "Содержимое шаблона.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "tpl" : {
+         "comment" : "справочник рынков",
+         "table" : "ad_trade_places",
+         "keys" : [
+            "place_code"
+         ],
+         "fields" : [
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "curr_code" : {
+                  "comment" : "Код валюты котировок.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_name" : {
+                  "comment" : "Название рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "info_price" : {
+                  "comment" : "Плата за информацию.",
+                  "type" : "float"
+               }
+            },
+            {
+               "status" : {
+                  "comment" : "Статус.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "last_session_date" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "t_acc_prefix" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "prev_session_date" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "ex_code" : {
+                  "comment" : "Код биржи.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "depo_code" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "allow_trade" : {
+                  "comment" : "Возможность подачи заявок.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "vendor_code" : {
+                  "comment" : "Источник котировок.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "dp_name" : {
+                  "comment" : "Имя расчетного депозитария.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_market_orders" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_nomarket_orders" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "balance_place_code" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "balance_place_name" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "market_name" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_rpc" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_rpc_auction" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_auction" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "quote_place_code" : {
+                  "comment" : "Код торговой площадки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "allow_all_trades" : {
+                  "comment" : "Флаг доступности для данного рынка потока всех сделок.",
+                  "type" : "varchar"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "tr" : {
+         "comment" : "сделки",
+         "table" : "ad_trades",
+         "keys" : [
+            "trd_no"
+         ],
+         "fields" : [
+            {
+               "trd_no" : {
+                  "comment" : "Номер.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "ord_no" : {
+                  "comment" : "Номер инициирующей заявки.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "acc_code" : {
+                  "comment" : "Портфель.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ts_no" : {
+                  "comment" : "Номер в торговой системе.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "trd_type_code" : {
+                  "comment" : "Код типа.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "b_s" : {
+                  "comment" : "Покупка/продажа.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "qty" : {
+                  "comment" : "Количество.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "price" : {
+                  "comment" : "Цена.",
+                  "type" : "float"
+               }
+            },
+            {
+               "ts_tax" : {
+                  "comment" : "Комиссия торговой системы.",
+                  "type" : "float"
+               }
+            },
+            {
+               "nkd" : {
+                  "comment" : "НКД.",
+                  "type" : "float"
+               }
+            },
+            {
+               "ts_time" : {
+                  "comment" : "Время торговой системы.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "comments" : {
+                  "comment" : "Комментарии.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "portfolio" : {
+                  "comment" : "(служебное поле)",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "p_code" : {
+                  "comment" : "Код актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "settlement_date" : {
+                  "comment" : "Дата урегулирования.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "settlemented" : {
+                  "comment" : "Урегулирована («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "bank_tax" : {
+                  "comment" : "Комиссия банка.",
+                  "type" : "float"
+               }
+            },
+            {
+               "depo_tax" : {
+                  "comment" : "Депозитарная комиссия.",
+                  "type" : "float"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "price_curr" : {
+                  "comment" : "Валюта цены.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "non_exch" : {
+                  "comment" : "Внебиржевая («Y» - да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "comiss" : {
+                  "comment" : "Комиссия.",
+                  "type" : "float"
+               }
+            },
+            {
+               "fee" : {
+                  "comment" : "Расходы.",
+                  "type" : "float"
+               }
+            },
+            {
+               "net_value" : {
+                  "comment" : "Всего.",
+                  "type" : "float"
+               }
+            },
+            {
+               "volume" : {
+                  "comment" : "Объем.",
+                  "type" : "float"
+               }
+            },
+            {
+               "pl" : {
+                  "comment" : "Прибыль/убыток.",
+                  "type" : "float"
+               }
+            },
+            {
+               "treaty" : {
+                  "comment" : "Счет.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "paper_no" : {
+                  "comment" : "Код инструмента.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "firm_code" : {
+                  "comment" : "Код контрагента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "money_rest" : {
+                  "comment" : "Остаток суммы.",
+                  "type" : "float"
+               }
+            },
+            {
+               "paper_rest" : {
+                  "comment" : "Остаток.",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "trt" : {
+         "comment" : "справочник типов сделок",
+         "table" : "ad_trade_types",
+         "keys" : [
+            "trd_type_code"
+         ],
+         "fields" : [
+            {
+               "trd_type_code" : {
+                  "comment" : "Код типа сделки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "trd_type_describtion" : {
+                  "comment" : "Описание типа сделки.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "i_last_update" : {
+                  "comment" : "Временная метка последнего обновления",
+                  "type" : "integer"
+               }
+            },
+            {
+               "trd_type_num_code" : {
+                  "comment" : "Числовой код типа сделки.",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "ti" : {
+         "comment" : "Historical quotes.",
+         "table" : "ad_historical_quotes",
+         "keys" : [
+            "paper_no", "timeframe", "quote_timestamp"
+         ],
+         "fields" : [
+            {
+               "paper_no" : {
+                  "comment" : "Paper number.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "timeframe" : {
+                  "comment" : "Time frame type.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "quote_timestamp" : {
+                  "comment" : "Quote timestamp.",
+                  "type" : "timestamp"
+               }
+            },
+            {
+               "open" : {
+                  "comment" : "Open price.",
+                  "type" : "float"
+               }
+            },
+            {
+               "high" : {
+                  "comment" : "High price.",
+                  "type" : "float"
+               }
+            },
+            {
+               "low" : {
+                  "comment" : "Low price.",
+                  "type" : "float"
+               }
+            },
+            {
+               "close" : {
+                  "comment" : "Close price.",
+                  "type" : "float"
+               }
+            },
+            {
+               "volume" : {
+                  "comment" : "Volume.",
+                  "type" : "double"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "arch_papers" : {
+         "comment" : "Papers archive.",
+         "table" : "ad_archive_papers",
+         "keys" : [
+            "paper_no"
+         ],
+         "fields" : [
+            {
+               "paper_no" : {
+                  "comment" : "Paper number.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "p_code" : {
+                  "comment" : "Код актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "ts_p_code" : {
+                  "comment" : "Торговый код инструмента.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_code" : {
+                  "comment" : "Код рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "place_name" : {
+                  "comment" : "Название рынка.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "unused" : {
+                  "comment" : "Unused field.",
+                  "type" : "integer"
+               }
+            },
+            {
+               "expired" : {
+                  "comment" : "Просрочен («Y»- да, «N» - нет).",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "board_code" : {
+                  "comment" : "Код торгового раздела.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "at_code" : {
+                  "comment" : "Код типа актива.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "mat_date" : {
+                  "comment" : "Дата погашения.",
+                  "type" : "timestamp"
+               }
+            }
+         ]
+      }
+   },
+   {
+      "continuous_quotes" : {
+         "comment" : "Dictionary of continuous quotes.",
+         "table" : "ad_continuous_quotes",
+         "keys" : [
+            "p_code", "paper_no"
+         ],
+         "unique_indices" : [
+            "paper_no"
+         ],
+         "fields" : [
+            {
+               "p_code" : {
+                  "comment" : "Paper name.",
+                  "type" : "varchar"
+               }
+            },
+            {
+               "paper_no" : {
+                  "comment" : "Paper number.",
+                  "type" : "integer"
+               }
+            }
+         ]
+      }
+   }
+]

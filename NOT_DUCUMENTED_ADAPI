@@ -1,0 +1,69 @@
+#
+# Reverse engeneered AlfaDirect terminal protocol
+#
+
+1.
+GET /ads/find_archive_papers.idc?text=GAZP- HTTP/1.1
+User-Agent: ADLite56953
+Host: www.alfadirect.ru
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: __utma=205649731.524936326.1303895757.1303895757.1303895757.1; __utmz=205649731.1303895757.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)
+
+
+HTTP/1.1 200 OK
+Connection: close
+Date: Wed, 04 May 2011 09:40:15 GMT
+Server: Microsoft-IIS/6.0
+X-Powered-By: ASP.NET
+Content-Type: text/html
+
+
+6396|GAZP-09.07|ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 17.09.07|FORTS|ï¿½ï¿½ï¿½ï¿½ï¿½|0|Y|FUTURES|FD|09/17/2007
+7051|GZ15000I6|GAZP-9.06_120906CA15000|FORTS|ï¿½ï¿½ï¿½ï¿½ï¿½|0|Y|OPTIONS|OC|09/12/2006
+7052|GZ15000U6|GAZP-9.06_120906PA15000|FORTS|ï¿½ï¿½ï¿½ï¿½ï¿½|0|Y|OPTIONS|OP|09/12/2006
+7053|GZ15500I6|GAZP-9.06_120906CA15500|FORTS|ï¿½ï¿½ï¿½ï¿½ï¿½|0|Y|OPTIONS|OC|09/12/2006
+
+
+-- getting archive quotes!
+
+2.
+intraday 1min
+id=1|ChartDataRequest
+paper_no=5845&period=0&interval=1&type=0&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
+
+intraday 5min
+id=2|ChartDataRequest
+paper_no=5845&period=0&interval=5&type=1&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
+
+intraday 10min
+id=3|ChartDataRequest
+paper_no=5845&period=0&interval=10&type=2&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
+
+intraday 15min
+id=4|ChartDataRequest
+paper_no=5845&period=0&interval=15&type=3&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
+
+intraday 30min
+id=5|ChartDataRequest
+paper_no=5845&period=0&interval=30&type=4&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
+
+intraday 60min
+id=6|ChartDataRequest
+paper_no=5845&period=0&interval=60&type=5&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
+
+daily
+id=7|ChartDataRequest
+paper_no=5845&period=1&type=6&from_date=2011-04-28 00:00&to_date=2011-05-05 23:59
+
+weekly
+id=8|ChartDataRequest
+paper_no=5845&period=2&type=7&from_date=2011-04-28 00:00&to_date=2011-05-11 23:59
+
+monthly
+id=9|ChartDataRequest
+paper_no=5845&period=3&type=8&from_date=2011-04-28 00:00&to_date=2011-06-03 23:59
+
+
+
+-- getting history data!

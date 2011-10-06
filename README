@@ -1,0 +1,28 @@
+NAME
+    AlfaDirectAPI - API library to Russian finance broker AlfaDirect
+    http://alfadirect.ru
+
+    This is a Qt wrapper over ADAPI.dll and heavy ugly AlfaDirect network
+    protocol.
+
+    AlfaDirectAPI is still in alpha, i.e. you can receive quotes but you can not
+    place your trade orders (actually this will be developed ASAP).
+
+    As I mentioned earlier this library uses ADAPI.dll (win32 black box dynamic
+    library - public server API, which kindly shared by AlfaDirect guys), but
+    you can still use it on Linux with Wine support.
+
+AUTHOR
+    Roman Pen
+
+BUGS
+SUPPORT
+    You can find AlfaDirect server API documentation in ADAPI/doc/* .
+
+ACKNOWLEDGEMENTS
+COPYRIGHT & LICENSE
+    Copyright 2009-2011 Roman Pen
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of either: the GNU General Public License as published
+    by the Free Software Foundation; or the Artistic License.

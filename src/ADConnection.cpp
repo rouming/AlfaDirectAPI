@@ -636,7 +636,7 @@ ADConnection::ADConnection () :
     qRegisterMetaType< ADConnection::Order::Operation >( "ADConnection::Order::Operation" );
     qRegisterMetaType< ADConnection::Order::OperationResult >( "ADConnection::Order::OperationResult" );
     qRegisterMetaType< ADConnection::Order::OperationType >( "ADConnection::Order::OperationType" );
-    qRegisterMetaType< ADSmartPtr<ADConnection::LogParam> >( "SmartPtr<ADConnection::LogParam>" );
+    qRegisterMetaType< ADSmartPtr<ADConnection::LogParam> >( "ADSmartPtr<ADConnection::LogParam>" );
     qRegisterMetaType< QVector<ADConnection::HistoricalQuote> >( "QVector<ADConnection::HistoricalQuote>" );
 }
 

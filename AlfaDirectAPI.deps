@@ -1,0 +1,8 @@
+INCLUDEPATH += \
+               $$PWD/src \
+               $$PWD/ADAPI/include
+
+QMAKE_LIBDIR += $$PWD/build
+QMAKE_RPATHDIR += $$PWD/build
+
+LIBS += -lAlfaDirectAPI

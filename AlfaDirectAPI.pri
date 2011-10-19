@@ -28,11 +28,13 @@ else {
 }
 
 !isEmpty(BUILD_NAME) {
-     DESTDIR = $$join(BUILD_NAME, "", $$LEVEL/build/)
+     BUILDDIR = $$lower($$join(BUILD_NAME, "", $$LEVEL/build/))
+     DESTDIR = $$LEVEL/build
      QMAKE_LIBDIR += $$DESTDIR
-     MOC_DIR = $$join(TARGET, "", $$DESTDIR/mocs/)
-     OBJECTS_DIR = $$join(TARGET, "", $$DESTDIR/obj/)
-     UI_DIR = $$DESTDIR/ui
+     MOC_DIR = $$join(TARGET, "", $$BUILDDIR/mocs/)
+     RCC_DIR = $$join(TARGET, "", $$BUILDDIR/resources/)
+     OBJECTS_DIR = $$join(TARGET, "", $$BUILDDIR/obj/)
+     UI_DIR = $$BUILDDIR/ui
 }
 
 INCLUDEDIR += $UI_DIR

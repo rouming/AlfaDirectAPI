@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/" >
-        <file>cert/cert.pem</file>
-        <file>cert/key.pem</file>
+        <file alias="ADAPI.dll">ADAPI/lib/ADAPI.dll</file>
     </qresource>
 </RCC>

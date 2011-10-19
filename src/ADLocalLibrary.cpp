@@ -3,6 +3,11 @@
 
 #include "ADLocalLibrary.h"
 
+#ifndef _WINE_ // Pure WIN
+  #include <QString>
+  #include "ADBootstrap.h"
+#endif
+
 /****************************************************************************/
 
 struct ADLibrarySyms
@@ -33,7 +38,11 @@ struct ADLibrarySyms
 /****************************************************************************/
 
 ADLocalLibrary::ADLocalLibrary () :
+#ifndef _WINE_ // Pure WIN
+    m_adLib( QString(QString::fromLatin1(ADBootstrap::bootstrapDir()) + "/ADAPI").toStdString() ),
+#else // Wine
     m_adLib("ADAPI"),
+#endif
     m_syms(new ADLibrarySyms)
 {
     ::memset(m_syms, 0, sizeof(*m_syms));

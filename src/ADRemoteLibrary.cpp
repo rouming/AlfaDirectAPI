@@ -16,6 +16,7 @@
 #include <QDir>
 
 #include "ADRemoteLibrary.h"
+#include "ADBootstrap.h"
 
 /******************************************************************************/
 
@@ -100,11 +101,11 @@ bool ADRemoteLibrary::load ()
     int res = -1;
     int flags = 0;
     QString serverBinPath;
+    QString bootstrapDir = QString::fromLatin1( ADBootstrap::bootstrapDir() );
     QDir cp( QCoreApplication::applicationDirPath() );
-    if ( cp.exists("ADAPIServer") )
-        serverBinPath = cp.absoluteFilePath("ADAPIServer");
-    else if ( cp.exists("ADAPIServer.exe") )
-        serverBinPath = cp.absoluteFilePath("ADAPIServer.exe");
+
+    if ( cp.exists(bootstrapDir + "/ADAPIServer.exe") )
+        serverBinPath = cp.absoluteFilePath(bootstrapDir + "/ADAPIServer.exe");
     else
         goto error;
 

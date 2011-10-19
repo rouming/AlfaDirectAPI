@@ -24,6 +24,7 @@ isEmpty( WINE_BUILD ) {
 }
 else {
   DEFINES += "_WIN_=1"
+  DEFINES += "_WINE_=1"
   DEFINES += "_X86_"
 }
 

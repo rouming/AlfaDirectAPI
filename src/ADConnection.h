@@ -62,6 +62,7 @@ public:
     enum Error
     {
         UnknownError = 0,
+        BootstrapError,
         DynamicLibLoadError,
         DynamicLibCallError,
         CertificateError,

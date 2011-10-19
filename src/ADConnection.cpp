@@ -16,6 +16,7 @@
 #include "ADConnection.h"
 #include "ADSubscription.h"
 #include "ADOrder.h"
+#include "ADBootstrap.h"
 
 #ifdef _WIN_
  #include "ADLocalLibrary.h"
@@ -2315,6 +2316,16 @@ void ADConnection::run ()
     m_sockEncBuffer.clear();
     m_sessInfo = ADSessionInfo();
     m_adDB = QSqlDatabase();
+
+    // Do bootstraping
+    {
+        res = ADBootstrap::bootstrap();
+        if ( ! res ) {
+            qWarning("bootstraping failed!");
+            m_lastError = BootstrapError;
+            goto clean;
+        }
+    }
 
     // Load library
     {

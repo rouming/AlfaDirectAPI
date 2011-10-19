@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/" >
+        <file alias="ADAPIServer.exe">../build/ADAPIServer.exe</file>
+        <file alias="ADAPIServer.exe.so">../build/ADAPIServer.exe.so</file>
+    </qresource>
+</RCC>

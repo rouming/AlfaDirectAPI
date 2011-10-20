@@ -3547,6 +3547,9 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
 
 void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
 {
+    // Store list of blocks in one transaction
+    m_adDB.driver()->beginTransaction();
+
     QList<DataBlock>::ConstIterator it = recv.begin();
     for ( ; it != recv.end(); ++it ) {
         // For now we do not support empty blocks
@@ -3644,9 +3647,6 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
                 Q_ASSERT(0);
             }
 
-            // Transaction begin
-            m_adDB.driver()->beginTransaction();
-
             QSqlQuery query( m_adDB );
             query.prepare(sql);
             for ( int i = 0; i < colsValues.size(); ++i ) {
@@ -3693,10 +3693,11 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
                          qPrintable(sql));
             }
 
-            // Transaction end
-            m_adDB.driver()->commitTransaction();
         }
     }
+
+    // Transaction end
+    m_adDB.driver()->commitTransaction();
 }
 
 void ADConnection::tcpError ( QTcpSocket&,

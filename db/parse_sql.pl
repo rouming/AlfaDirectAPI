@@ -9,11 +9,11 @@ use open qw(:std :utf8); # use utf8 for descriptors, e.g. STDOUT
 
 
 sub usage {
-    printf "parse_sql.pl [mysql|firebird] <schema.json>\n";
+    printf "parse_sql.pl [sqlite|mysql|firebird] <schema.json>\n";
     exit 1;
 }
 
-usage if ( $ARGV[0] !~ /^(mysql|firebird)$/ );
+usage if ( $ARGV[0] !~ /^(sqlite|mysql|firebird)$/ );
 my $SCHEMA_TYPE = $ARGV[0];
 
 open FILE, $ARGV[1] or usage;
@@ -46,11 +46,17 @@ for my $stream ( @$streams ) {
     my $stream_desc = $stream->{$stream_name};
 
     printf "CREATE TABLE %s %s (\n",
-        ($SCHEMA_TYPE eq "mysql" ? "IF NOT EXISTS" : ""),
+        ($SCHEMA_TYPE eq "mysql" || $SCHEMA_TYPE eq "sqlite" ? "IF NOT EXISTS" : ""),
         uc($stream_desc->{table});
     my $fields = $stream_desc->{fields};
     my $keys_array = $stream_desc->{keys};
     my $un_indices_array = $stream_desc->{unique_indices};
+
+    $keys_array = undef
+        if defined $keys_array && scalar @$keys_array == 0;
+    $un_indices_array = undef
+        if defined $un_indices_array && scalar @$un_indices_array == 0;
+
     my %keys = map { $_ => 1 } @$keys_array;
     for ( my $i = 0; $i <= $#{$fields}; ++$i ) {
         my $field = $fields->[$i];
@@ -74,28 +80,54 @@ for my $stream ( @$streams ) {
         if ( exists $keys{ $field_name } ) {
             print "\tNOT NULL";
         }
-        if ( $i == $#{$fields} ) {
-            print "\n";
+
+        if ( $SCHEMA_TYPE eq 'sqlite' ) {
+            if ( $i == $#{$fields} && ! $un_indices_array && ! $keys_array ) {
+                print "\n";
+            }
+            else {
+                print ",\n";
+            }
         }
         else {
-            print ",\n";
+            if ( $i == $#{$fields} ) {
+                print "\n";
+            }
+            else {
+                print ",\n";
+            }
         }
     }
+
+    if ( $SCHEMA_TYPE eq 'sqlite' ) {
+        print "\n" if $keys_array || $un_indices_array;
+
+        print "\tUNIQUE (" . join(", ", (map { sprintf("%s%s%s", $col_symbol, $_, $col_symbol) } @$un_indices_array)) . ")"
+            if $un_indices_array;
+
+        print ",\n" if $keys_array && $un_indices_array;
+
+        print "\tPRIMARY KEY (" . join(", ", (map { sprintf("%s%s%s", $col_symbol, $_, $col_symbol) } @$keys_array)) . ")\n"
+            if $keys_array;
+    }
+
     printf ") %s;\n\n",
         ($SCHEMA_TYPE eq 'mysql' ?
          "ENGINE=MyISAM DEFAULT CHARSET=utf8" : "");
 
-    # Remove MY_ prefix
-    my $constraint_name = uc($stream_desc->{table});
-    $constraint_name =~ s/my_//i;
+    if ( $SCHEMA_TYPE ne 'sqlite' ) {
+        # Remove MY_ prefix
+        my $constraint_name = uc($stream_desc->{table});
+        $constraint_name =~ s/my_//i;
 
-    print "ALTER TABLE " . uc($stream_desc->{table}) .
-        " ADD UNIQUE INDEX (" . join(", ", (map { sprintf("%s%s%s", $col_symbol, $_, $col_symbol) } @$un_indices_array)) . ");\n"
-            if $un_indices_array && scalar @$un_indices_array;
+        print "ALTER TABLE " . uc($stream_desc->{table}) .
+            " ADD UNIQUE INDEX (" . join(", ", (map { sprintf("%s%s%s", $col_symbol, $_, $col_symbol) } @$un_indices_array)) . ");\n"
+                if $un_indices_array;
 
-    print "ALTER TABLE " . uc($stream_desc->{table}) . " ADD CONSTRAINT " .
-        $constraint_name . "_PK PRIMARY KEY (" . join(", ", (map { sprintf("%s%s%s", $col_symbol, $_, $col_symbol) } @$keys_array)) . ");\n"
-            if $keys_array && scalar @$keys_array;
+        print "ALTER TABLE " . uc($stream_desc->{table}) . " ADD CONSTRAINT " .
+            $constraint_name . "_PK PRIMARY KEY (" . join(", ", (map { sprintf("%s%s%s", $col_symbol, $_, $col_symbol) } @$keys_array)) . ");\n"
+                if $keys_array;
 
-    print "\n";
+        print "\n";
+    }
 }

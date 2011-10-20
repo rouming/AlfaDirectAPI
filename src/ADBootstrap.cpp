@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QList>
 #include <QPair>
+#include <QFile>
 #include <QCoreApplication>
 
 #include "ADBootstrap.h"
@@ -11,12 +12,17 @@
 static const QByteArray s_bootstrapDirData = "bootstrap";
 static const QByteArray s_bootstrapDir( s_bootstrapDirData );
 
-static const QList<QPair<QString,QString> > s_bootBins = QList<QPair<QString,QString> >()
-    << QPair<QString,QString>(":ADAPI.dll", "ADAPI.dll")
+#define RWX (QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner)
+#define RW  (QFile::ReadOwner | QFile::WriteOwner)
+
+typedef QPair<QString,QFile::Permissions> BootPair;
+
+static const QList<BootPair> s_bootBins = QList<BootPair>()
+    << BootPair("ADAPI.dll", RWX)
 
 #ifndef _WIN_ // Unix
-    << QPair<QString,QString>(":ADAPIServer.exe", "ADAPIServer.exe")
-    << QPair<QString,QString>(":ADAPIServer.exe.so", "ADAPIServer.exe.so")
+    << BootPair("ADAPIServer.exe", RWX)
+    << BootPair("ADAPIServer.exe.so", RWX)
 #endif
        ;
 
@@ -38,11 +44,11 @@ bool ADBootstrap::bootstrap ()
     }
 
     // Copy needed binaries
-    for ( QList<QPair<QString,QString> >::ConstIterator it = s_bootBins.begin();
+    for ( QList<BootPair>::ConstIterator it = s_bootBins.begin();
           it != s_bootBins.end();
           ++it ) {
-        const QPair<QString, QString>& bin = *it;
-        QFile in( bin.first );
+        const BootPair& bin = *it;
+        QFile in( ":" + bin.first );
         res = in.open( QFile::ReadOnly );
         if ( ! res ) {
             qWarning("Can't read bootstap bin '%s'",
@@ -50,11 +56,11 @@ bool ADBootstrap::bootstrap ()
             return res;
         }
 
-        QFile out( bootstrapDir.absolutePath() + "/" + bin.second );
+        QFile out( bootstrapDir.absolutePath() + "/" + bin.first );
         res = out.open( QFile::WriteOnly );
         if ( ! res ) {
             qWarning("Can't write bootstap bin '%s'",
-                     qPrintable(bin.second));
+                     qPrintable(bin.first));
             return res;
         }
 
@@ -62,17 +68,15 @@ bool ADBootstrap::bootstrap ()
         qint64 size = out.write( ba );
         if ( ba.size() != size ) {
             qWarning("Write to bootstrap bin '%s' failed",
-                     qPrintable(bin.second));
+                     qPrintable(bin.first));
             return false;
         }
 
         // Set executable permissions
-        res = out.setPermissions( QFile::ReadOwner |
-                                  QFile::WriteOwner |
-                                  QFile::ExeOwner );
+        res = out.setPermissions( bin.second );
         if ( ! res ) {
             qWarning("Setting executable permission for bootstrap bin '%s' failed",
-                     qPrintable(bin.second));
+                     qPrintable(bin.first));
             return res;
         }
     }

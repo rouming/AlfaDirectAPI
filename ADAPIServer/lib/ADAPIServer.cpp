@@ -201,6 +201,9 @@ int ADAPIServerBase::startServer ()
     signal(SIGPIPE, SIG_IGN);
 
     try {
+        // Set XML size to max
+        xmlrpc_limit_set(XMLRPC_XML_SIZE_LIMIT_ID, UINT_MAX);
+
         xmlrpc_c::registry myRegistry;
 
         xmlrpc_c::methodPtr const encodeMethodP(new EncodeMethod(this));

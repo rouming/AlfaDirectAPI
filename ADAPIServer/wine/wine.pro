@@ -29,6 +29,6 @@ SOURCES = \
 
 QMAKE_RPATHDIR += $$DESTDIR
 
-LIBS +=  -lADAPIServer -lxmlrpc++ -lxmlrpc_server++ -lxmlrpc_server_pstream++
+LIBS +=  -lADAPIServer -lxmlrpc++ -lxmlrpc_server++ -lxmlrpc_server_pstream++ -lxmlrpc
 
 DEFINED -= _LIN_=1

@@ -149,8 +149,9 @@ bool ADRemoteLibrary::load ()
         m_data->client = new xmlrpc_c::client_xml(m_data->transport);
 
         return true;
+    } catch (std::exception const& e) {
+        qWarning("Something threw an error: %s", e.what());
     }
-    catch ( ... ) {}
 
  error:
     unload();

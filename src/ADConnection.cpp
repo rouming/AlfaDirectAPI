@@ -5,6 +5,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlDriver>
+#include <QSqlRecord>
 #include <QVariant>
 #include <QTextCodec>
 #include <QDir>
@@ -1415,48 +1416,21 @@ bool ADConnection::_sqlGetDBSchema ( QHash<QString, QStringList>& schema )
 {
     Q_ASSERT(QThread::currentThread() == this);
 
-    QSqlQuery query( m_adDB );
-    QString sql;
-
-    if ( m_adDB.driverName() == "QIBASE" ) {
-        sql =
-            "SELECT f.rdb$relation_name, f.rdb$field_name "
-            "FROM rdb$relation_fields f "
-            "  JOIN rdb$relations r ON f.rdb$relation_name = r.rdb$relation_name AND "
-            "       r.rdb$view_blr IS NULL AND "
-            "      (r.rdb$system_flag IS NULL OR r.rdb$system_flag = 0) "
-            " ORDER BY 1, f.rdb$field_position ";
-    }
-    else if ( m_adDB.driverName() == "QMYSQL" ) {
-        sql = QString(
-                      "SELECT t.table_name, c.column_name "
-                      "FROM information_schema.columns AS c "
-                      "  LEFT JOIN information_schema.tables AS t ON t.table_name = c.table_name "
-                      " WHERE t.table_schema = '%1' "
-                      " ORDER BY c.table_name, c.ordinal_position ").arg(m_adDB.databaseName());
-    }
-    else {
-        Q_ASSERT(0);
-        return false;
-    }
-
-    // Execute query
-    query.prepare( sql );
-    if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
-        return false;
-    }
-
     schema.clear();
 
-    // Fetch result
-    while ( query.next() ) {
-        QString tableName = query.value(0).toString();
-        QString fieldName = query.value(1).toString();
-        tableName.remove(QRegExp("\\s+$"));
-        fieldName.remove(QRegExp("\\s+$"));
-        schema[tableName].append(fieldName);
+    QStringList tables = m_adDB.tables( QSql::Tables );
+    foreach ( QString tableName, tables ) {
+        QSqlRecord fieldsRec = m_adDB.record( tableName );
+        for ( int i = 0; i < fieldsRec.count(); ++i ) {
+            //XXX  QString fieldName = fieldsRec.value(i).toString();
+            QString fieldName = fieldsRec.fieldName(i);
+
+            tableName.remove(QRegExp("\\s+$"));
+            fieldName.remove(QRegExp("\\s+$"));
+            schema[tableName].append(fieldName);
+        }
     }
+
     return (schema.size() > 0);
 }
 
@@ -2104,20 +2078,26 @@ bool ADConnection::sqlInsertArchivePaper ( int paperNo, const QString& paperCode
                                            const QString& expired, const QString& boardCode,
                                            const QString& atCode, const QDateTime& matDate )
 {
-    QString sql("INSERT INTO AD_ARCHIVE_PAPERS VALUES ( "
+    QString sql("INTO AD_ARCHIVE_PAPERS VALUES ( "
                 "?, ?, ?, ?, ?, ?, ?, ?, ?, ? )");
 
     if ( m_adDB.driverName() == "QIBASE" )
-        sql = "UPDATE OR " + sql;
+        sql = "UPDATE OR INSERT " + sql;
+    else if ( m_adDB.driverName() == "QSQLITE" )
+        sql = "INSERT OR REPLACE " + sql;
     else if ( m_adDB.driverName() == "QMYSQL" )
-        sql += QString(" ON DUPLICATE KEY UPDATE "
-                       " \"paper_no\" = ?, \"p_code\" = ?, "
-                       " \"ts_p_code\" = ?, \"place_code\" = ?, "
-                       " \"place_name\" = ?, \"unused\" = ?, "
-                       " \"expired\" = ?, \"board_code\" = ?, "
-                       " \"at_code\" = ?, \"mat_date\" = ? ");
-    else
+        sql = "INSERT " + sql +
+            QString(" ON DUPLICATE KEY UPDATE "
+                    " \"paper_no\" = ?, \"p_code\" = ?, "
+                    " \"ts_p_code\" = ?, \"place_code\" = ?, "
+                    " \"place_name\" = ?, \"unused\" = ?, "
+                    " \"expired\" = ?, \"board_code\" = ?, "
+                    " \"at_code\" = ?, \"mat_date\" = ? ");
+    else {
+        qFatal("Unsupported DB driver '%s'",
+               qPrintable(m_adDB.driverName()));
         Q_ASSERT(0);
+    }
 
     // Execute query
     QSqlQuery query( m_adDB );
@@ -2406,16 +2386,83 @@ void ADConnection::run ()
     // Connect to AD server
     {
         // Connect to DB
-#ifdef _WIN_
-        m_adDB = QSqlDatabase::addDatabase("QIBASE");
-        m_adDB.setDatabaseName( QCoreApplication::applicationDirPath() + "/../../db/AD.fdb");
-        m_adDB.setConnectOptions("ISC_DPB_LC_CTYPE=UTF-8");
-#else
-        m_adDB = QSqlDatabase::addDatabase("QMYSQL");
-        m_adDB.setUserName( "root" );
-        m_adDB.setPassword( "" );
-        m_adDB.setDatabaseName( "ad");
-#endif
+
+        // Default driver name
+        const QString DriverName = "QSQLITE";
+        QString dbResource;
+        QString dbPath;
+        bool dbShouldBeCreated = false;
+
+        if ( DriverName == "QMYSQL" ) {
+            m_adDB = QSqlDatabase::addDatabase( DriverName );
+            m_adDB.setUserName( "root" );
+            m_adDB.setPassword( "" );
+            m_adDB.setDatabaseName( "ad");
+
+            dbResource = ":AD.mysql.sql";
+        }
+        else {
+            // Create DB directory
+            QDir dbDir( QCoreApplication::applicationDirPath() + "/db" );
+            if ( ! dbDir.exists() ) {
+                res = dbDir.mkpath(dbDir.absolutePath());
+                if ( ! res ) {
+                    qWarning("Can't create DB dir '%s'",
+                             qPrintable(dbDir.absolutePath()));
+                    m_lastError = SQLConnectError;
+                    goto clean;
+                }
+            }
+
+            if ( DriverName == "QSQLITE" ) {
+                dbPath = dbDir.absolutePath() + "/AD.db";
+                dbResource = ":AD.sqlite.sql";
+            }
+            else if ( DriverName == "QIBASE" ) {
+                dbPath = dbDir.absolutePath() + "/AD.fdb";
+                dbResource = ":AD.firebird.sql";
+            }
+            else
+                Q_ASSERT(0);
+
+            dbShouldBeCreated = ! QFileInfo(dbPath).exists();
+
+            // Setup DB
+            m_adDB = QSqlDatabase::addDatabase( DriverName );
+            m_adDB.setDatabaseName( dbPath );
+
+            if ( DriverName == "QIBASE" )
+                m_adDB.setConnectOptions("ISC_DPB_LC_CTYPE=UTF-8");
+        }
+
+        // Try to fill DB
+        if ( dbShouldBeCreated ) {
+            //XXX For now we do not support DB population
+            //XXX with batch SQL statements, so return error
+            {
+                qWarning("DB '%s' does not exist!", qPrintable(dbPath));
+                m_lastError = SQLConnectError;
+                goto clean;
+            }
+
+            QFile sqlFile( dbResource );
+            if ( ! sqlFile.open(QFile::ReadOnly) ) {
+                qWarning("Can't open SQL resource '%s' for DB creation!",
+                         qPrintable(dbResource));
+                m_lastError = SQLConnectError;
+                goto clean;
+            }
+            QByteArray sqlData = sqlFile.readAll();
+            if ( sqlData.isEmpty() ) {
+                qWarning("Can't read SQL resource '%s' for DB creation!",
+                         qPrintable(dbResource));
+                m_lastError = SQLConnectError;
+                goto clean;
+            }
+
+            //XXX DB open should be made before any SQL execution
+        }
+
         if ( ! m_adDB.open() ) {
             qWarning("Can't open DB!");
             m_lastError = SQLConnectError;
@@ -3577,17 +3624,25 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
             }
             Q_ASSERT(colsNames.size() == colsValues.size());
 
-            QString sql = QString("INSERT INTO %1 (%2) VALUES (%3)")
+            QString sql = QString("INTO %1 (%2) VALUES (%3)")
                 .arg(tableName)
                 .arg(colsNamesEsc.join(", "))
                 .arg(placeHolders.join(", "));
 
             if ( m_adDB.driverName() == "QIBASE" )
-                sql = "UPDATE OR " + sql;
+                sql = "UPDATE OR INSERT " + sql;
+            else if ( m_adDB.driverName() == "QSQLITE" )
+                sql = "INSERT OR REPLACE " + sql;
             else if ( m_adDB.driverName() == "QMYSQL" )
-                sql += QString(" ON DUPLICATE KEY UPDATE %1%2").arg(colsNamesEsc.join("=?, ")).arg("=?");
-            else
+                sql += "INSERT " + sql +
+                    QString(" ON DUPLICATE KEY UPDATE %1%2").
+                        arg(colsNamesEsc.join("=?, ")).
+                        arg("=?");
+            else {
+                qFatal("Unsupported DB driver '%s'",
+                       qPrintable(m_adDB.driverName()));
                 Q_ASSERT(0);
+            }
 
             // Transaction begin
             m_adDB.driver()->beginTransaction();

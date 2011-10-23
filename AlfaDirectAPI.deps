@@ -5,7 +5,8 @@ INCLUDEPATH += \
 QMAKE_LIBDIR += $$PWD/build
 QMAKE_RPATHDIR += $$PWD/build
 
+LIBS += -lAlfaDirectAPI
+
 win32:LIBS += -lodbc32
 unix:LIBS += -lxmlrpc++ -lxmlrpc_client++ -lxmlrpc -lrt
 
-LIBS += -lAlfaDirectAPI

@@ -275,49 +275,74 @@ ADConnection::LogParam::LogParam ( bool updateType_, const QDateTime& nowDt_,
 
 /****************************************************************************/
 
-HttpReceiver::HttpReceiver ( ADConnection* conn, QHttp& http ) :
-    m_conn(conn),
-    m_http(http),
-    m_reqId(0),
-    m_finished(false)
-{}
-
-void HttpReceiver::httpReadResponseHeader (
-                                           const QHttpResponseHeader& respHeader )
+static ADConnection::Error ADSendHttpsRequest (
+    const QString& url,
+    const QString& login,
+    const QString& passwd,
+    QByteArray& outData )
 {
-    switch ( respHeader.statusCode() ) {
-    case 200:                   // Ok
-    case 301:                   // Moved Permanently
-    case 302:                   // Found
-    case 303:                   // See Other
-    case 307:                   // Temporary Redirect
-        // these are not error conditions
-        break;
+    QEventLoop loop;
+    QTimer timer;
+    QNetworkAccessManager net;
 
-    default:
-        qWarning("wrong http response %d", respHeader.statusCode());
-        m_conn->QThread::quit();
+    // Connect some signal staff
+    timer.setSingleShot(true);
+    QObject::connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    QObject::connect(&net, SIGNAL(finished(QNetworkReply*)), &loop, SLOT(quit()));
+
+    QNetworkRequest request( url );
+
+    // Set user agent like real AD client does
+    request.setRawHeader("User-Agent", "ADLite56953");
+
+    // Set auth data
+    QByteArray authData = QString(login + ":" + passwd).toLocal8Bit().toBase64();
+    QString headerData = "Basic " + authData;
+    request.setRawHeader("Authorization", headerData.toLocal8Bit());
+
+    QNetworkReply* reply = net.get( request );
+    reply->ignoreSslErrors();
+    QSslConfiguration conf = reply->sslConfiguration();
+    conf.setProtocol( QSsl::AnyProtocol );
+    reply->setSslConfiguration( conf );
+
+    // Start network loop with 5 secs timeout
+    timer.start(5000);
+    loop.exec();
+
+    // We can call this before real access to reply members,
+    // because we are absolutely sure that we are in main thread.
+    reply->deleteLater();
+
+    QString replyData;
+
+    // Check that request has been completed
+    if ( reply->isFinished() && reply->error() == QNetworkReply::NoError ) {
+        timer.stop();
+
+        QTextCodec* codec = QTextCodec::codecForName("Windows-1251");
+        if ( ! codec ) {
+            qWarning("Can't find codec WIN-1251");
+            return ADConnection::SocketError;
+        }
+
+        replyData = codec->toUnicode( reply->readAll() );
     }
-}
-
-void HttpReceiver::httpRequestFinished ( int reqId, bool error )
-{
-    if ( reqId == m_reqId ) {
-        m_finished = !error;
-        if ( error )
-            qWarning("HTTP ERROR: %s", qPrintable(m_http.errorString()));
-        m_conn->QThread::quit();
+    // HTTP error
+    else if ( reply->isFinished() && reply->error() != QNetworkReply::NoError ) {
+        qWarning("HTTP ERROR: some error occured %d", reply->error());
+        return ADConnection::SocketError;
     }
-}
+    // Timeout
+    else {
+            qWarning("HTTP ERROR: timeout while sending http request!");
+            return ADConnection::SocketError;
+    }
 
-void HttpReceiver::setHttpRequestId ( int reqId )
-{
-    m_reqId = reqId;
-}
+    // Success
 
-bool HttpReceiver::isRequestFinished () const
-{
-    return m_finished;
+    outData = replyData.toAscii();
+    return ADConnection::NoError;
 }
 
 /****************************************************************************/
@@ -594,7 +619,7 @@ bool ADConnection::dateTimeToADTime ( const QDateTime& dt, int& adTime )
 /****************************************************************************/
 
 ADConnection::ADConnection () :
-    m_lastError(UnknownError),
+    m_lastError(NoError),
     m_state(DisconnectedState),
 #ifdef _WIN_
     m_adLib( ADSmartPtr<ADLibrary>(new ADLocalLibrary) ),
@@ -1202,67 +1227,16 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
     }
     // Try to make archive request to AD
     else if ( usingArchive ) {
-        QEventLoop loop;
-        QTimer timer;
-        QNetworkAccessManager net;
-
-        // Connect some signal staff
-        timer.setSingleShot(true);
-        QObject::connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
-        QObject::connect(&net, SIGNAL(finished(QNetworkReply*)), &loop, SLOT(quit()));
-
         QString url = QString("https://www.alfadirect.ru/ads/find_archive_papers.idc?text=%1").arg(papCode);
-        QNetworkRequest request( url );
 
-        // Set user agent like real AD client does
-        request.setRawHeader("User-Agent", "ADLite56953");
-
-        // Set auth data
-        QByteArray authData = QString(m_login + ":" + m_password).toLocal8Bit().toBase64();
-        QString headerData = "Basic " + authData;
-        request.setRawHeader("Authorization", headerData.toLocal8Bit());
-
-        QNetworkReply* reply = net.get( request );
-        reply->ignoreSslErrors();
-        QSslConfiguration conf = reply->sslConfiguration();
-        conf.setProtocol( QSsl::AnyProtocol );
-        reply->setSslConfiguration( conf );
-
-        // Start network loop with 5 secs timeout
-        timer.start(5000);
-        loop.exec();
-
-        // We can call this before real access to reply members,
-        // because we are absolutely sure that we are in main thread.
-        reply->deleteLater();
-
-        QString replyData;
-
-        // Check that request has been completed
-        if ( reply->isFinished() && reply->error() == QNetworkReply::NoError ) {
-            timer.stop();
-
-            QTextCodec* codec = QTextCodec::codecForName("Windows-1251");
-            if ( ! codec ) {
-                qWarning("Can't find codec WIN-1251");
-                return;
-            }
-
-            replyData = codec->toUnicode( reply->readAll() );
-        }
-        // HTTP error
-        else if ( reply->isFinished() && reply->error() != QNetworkReply::NoError ) {
-            qWarning("HTTP ERROR: some error occured %d", reply->error());
+        // Send https request
+        QByteArray data;
+        Error err = ADSendHttpsRequest(url, m_login, m_password, data);
+        if ( err != NoError )
             return;
-        }
-        // Timeout
-        else {
-            qWarning("HTTP ERROR: timeout while getting archive papers!");
-            return;
-        }
 
         // Parse reply data
-        QStringList lines = replyData.split("\n", QString::SkipEmptyParts);
+        QStringList lines = QString(data).split("\n", QString::SkipEmptyParts);
         for ( QStringList::Iterator it = lines.begin();
               it != lines.end(); ++it ) {
             QString& line = *it;
@@ -2184,11 +2158,9 @@ bool ADConnection::getCachedTemplateDocument ( const QString& docName,
     }
 }
 
-bool ADConnection::updateSessionInfo ( const QBuffer& buffer )
+bool ADConnection::updateSessionInfo ( const QByteArray& ba )
 {
     bool res = false;
-
-    const QByteArray ba = buffer.buffer();
 
     QStringList fields = QString(ba.data()).split("|");
     if ( fields.size() < 15 ) {
@@ -2289,7 +2261,7 @@ void ADConnection::run ()
     locker.unlock();
 
     // Drop states and flags
-    m_lastError = UnknownError;
+    m_lastError = NoError;
     m_state = DisconnectedState;
     m_authed = false;
     m_sockBuffer.clear();
@@ -2327,55 +2299,24 @@ void ADConnection::run ()
             m_lastError = DynamicLibCallError;
             goto clean;
         }
-        QUrl adUrl( QString("https://www.alfadirect.ru/ads/connect.idc?"
-                            // Url from API doc.
-                            //"vers=%1&cpcsp_eval=0&cpcsp_ver=3.6").arg(protoVer) );
-                            //"vers=3.1.1.8&cpcsp_eval=0&cpcsp_ver=2.0.1.2089") );
 
-                            //Url from AD terminal.
-                            "vers=3.5.1.5&cpcsp_eval=0&cpcsp_ver=3.6") );
+        QString url("https://www.alfadirect.ru/ads/connect.idc?"
+                    // Url from API doc.
+                    //"vers=%1&cpcsp_eval=0&cpcsp_ver=3.6").arg(protoVer) );
+                    //"vers=3.1.1.8&cpcsp_eval=0&cpcsp_ver=2.0.1.2089") );
 
-        QHttp http( adUrl.host(), QHttp::ConnectionModeHttps );
-        HttpReceiver httpReceiver( this, http );
-
-        QObject::connect(&http,
-                         SIGNAL(requestFinished(int, bool)),
-                         &httpReceiver,
-                         SLOT(httpRequestFinished(int, bool)));
-        QObject::connect(&http,
-                         SIGNAL(responseHeaderReceived(const QHttpResponseHeader &)),
-                         &httpReceiver,
-                         SLOT(httpReadResponseHeader(const QHttpResponseHeader &)));
-
-        http.setUser( login, passwd );
-
-        int reqId = 0;
-        QBuffer buffer;
-        res = buffer.open( QBuffer::ReadWrite );
-        if ( ! res ) {
-            m_lastError = SocketError;
-            qWarning("can't open buffer!");
-            goto clean;
-        }
-        reqId = http.get( adUrl.toString(), &buffer );
-        httpReceiver.setHttpRequestId( reqId );
-
-        // Run into loop
-        QThread::exec();
-
-        // Check errors
-        if ( m_lastError != UnknownError ) {
-            qWarning("ERROR! Will stop!");
-            goto clean;
-        }
-        if ( ! httpReceiver.isRequestFinished() ) {
-            m_lastError = SocketError;
-            qWarning("HTTP request has not been finished!");
+                    //Url from AD terminal.
+                    "vers=3.5.1.5&cpcsp_eval=0&cpcsp_ver=3.6");
+        // Send https request
+        QByteArray data;
+        Error err = ADSendHttpsRequest(url, m_login, m_password, data);
+        if ( err != NoError ) {
+            m_lastError = err;
             goto clean;
         }
 
         // Parse data
-        res = updateSessionInfo( buffer );
+        res = updateSessionInfo( data );
         if ( ! res ) {
             m_lastError = ParseHTTPDataError;
             qWarning("HTTP response is invalid!");

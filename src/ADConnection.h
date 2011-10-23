@@ -12,7 +12,6 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include <QReadWriteLock>
-#include <QHttp>
 #include <QTimer>
 #include <QSqlDatabase>
 
@@ -61,7 +60,7 @@ public:
 
     enum Error
     {
-        UnknownError = 0,
+        NoError = 0,
         BootstrapError,
         DynamicLibLoadError,
         DynamicLibCallError,
@@ -414,7 +413,7 @@ private:
     void run ();
     void storeDataIntoDB ( const QList<DataBlock>& recv );
 
-    bool updateSessionInfo ( const QBuffer& );
+    bool updateSessionInfo ( const QByteArray& );
     // Do not lock anything!
     bool _getQuote ( int paperNo, Quote& quote ) const;
     bool _unsubscribeToQuote ( const ADSmartPtr<ADSubscriptionPrivate>& );
@@ -485,7 +484,6 @@ private:
     void unlock ();
 
 private:
-    friend class HttpReceiver;
     friend class TcpReceiver;
     friend class SQLReceiver;
     friend class GenericReceiver;
@@ -548,26 +546,6 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 // Helpers
 ////////////////////////////////////////////////////////////////////////////
-
-
-class HttpReceiver : public QObject
-{
-    Q_OBJECT
-public:
-    HttpReceiver ( class ADConnection*, QHttp& );
-    void setHttpRequestId ( int reqId );
-    bool isRequestFinished () const;
-
-public slots:
-    void httpRequestFinished ( int reqId, bool error );
-    void httpReadResponseHeader ( const QHttpResponseHeader& respHeader );
-
-private:
-    class ADConnection* m_conn;
-    QHttp& m_http;
-    int m_reqId;
-    bool m_finished;
-};
 
 class TcpReceiver : public QObject
 {

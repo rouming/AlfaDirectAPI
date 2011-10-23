@@ -319,7 +319,8 @@ bool ADRemoteLibrary::decode ( const char* pEncodingType, unsigned int cEncoding
 
         //XXX
         if ( data.size() >= XMLRPC_XML_SIZE_LIMIT_DEFAULT )
-            printf("!!!!!!!!!!!! >>>>>>>>  enc=%d, dec=%lu, parsed=%d\n", cDataSize, data.size(), parsedSize);
+            printf("!!!!!!!!!!!! >>>>>>>>  enc=%d, dec=%u, parsed=%d\n",
+                   cDataSize, (unsigned int)data.size(), parsedSize);
 
         //XXX
         if ( 0 )

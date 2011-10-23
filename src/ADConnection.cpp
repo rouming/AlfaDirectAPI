@@ -2289,45 +2289,8 @@ void ADConnection::run ()
         }
     }
 
-    // Get session info through HTTPS
+    // Connect to DB
     {
-        char protoVer[ 256 ] = {0};
-        int size = sizeof(protoVer);
-        res = m_adLib->getProtocolVersion( protoVer, &size );
-        if ( ! res ) {
-            qWarning("call getProtoVersion returned false!");
-            m_lastError = DynamicLibCallError;
-            goto clean;
-        }
-
-        QString url("https://www.alfadirect.ru/ads/connect.idc?"
-                    // Url from API doc.
-                    //"vers=%1&cpcsp_eval=0&cpcsp_ver=3.6").arg(protoVer) );
-                    //"vers=3.1.1.8&cpcsp_eval=0&cpcsp_ver=2.0.1.2089") );
-
-                    //Url from AD terminal.
-                    "vers=3.5.1.5&cpcsp_eval=0&cpcsp_ver=3.6");
-        // Send https request
-        QByteArray data;
-        Error err = ADSendHttpsRequest(url, m_login, m_password, data);
-        if ( err != NoError ) {
-            m_lastError = err;
-            goto clean;
-        }
-
-        // Parse data
-        res = updateSessionInfo( data );
-        if ( ! res ) {
-            m_lastError = ParseHTTPDataError;
-            qWarning("HTTP response is invalid!");
-            goto clean;
-        }
-    }
-
-    // Connect to AD server
-    {
-        // Connect to DB
-
         // Default driver name
         const QString DriverName = "QSQLITE";
         QString dbResource;
@@ -2417,7 +2380,45 @@ void ADConnection::run ()
                 goto clean;
             }
         }
+    }
 
+    // Get session info through HTTPS
+    {
+        char protoVer[ 256 ] = {0};
+        int size = sizeof(protoVer);
+        res = m_adLib->getProtocolVersion( protoVer, &size );
+        if ( ! res ) {
+            qWarning("call getProtoVersion returned false!");
+            m_lastError = DynamicLibCallError;
+            goto clean;
+        }
+
+        QString url("https://www.alfadirect.ru/ads/connect.idc?"
+                    // Url from API doc.
+                    //"vers=%1&cpcsp_eval=0&cpcsp_ver=3.6").arg(protoVer) );
+                    //"vers=3.1.1.8&cpcsp_eval=0&cpcsp_ver=2.0.1.2089") );
+
+                    //Url from AD terminal.
+                    "vers=3.5.1.5&cpcsp_eval=0&cpcsp_ver=3.6");
+        // Send https request
+        QByteArray data;
+        Error err = ADSendHttpsRequest(url, m_login, m_password, data);
+        if ( err != NoError ) {
+            m_lastError = err;
+            goto clean;
+        }
+
+        // Parse data
+        res = updateSessionInfo( data );
+        if ( ! res ) {
+            m_lastError = ParseHTTPDataError;
+            qWarning("HTTP response is invalid!");
+            goto clean;
+        }
+    }
+
+    // Connect to AD server
+    {
         SQLReceiver sqlReceiver( this );
         QObject::connect( this,
                           SIGNAL(onFindFutures(const QString&, ADFutures*, bool*)),

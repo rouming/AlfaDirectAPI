@@ -2611,7 +2611,31 @@ void ADConnection::run ()
 void ADConnection::tcpReadyRead ( QTcpSocket& )
 {
     QList<DataBlock> recv;
+
+    quint32 diff, diff_tcp = 0;
+    static TimeMark s_tm = 0;
+    TimeMark tm1, tm2;
+    timeMark( tm1 );
+
+    if ( s_tm == 0 )
+        s_tm = tm1;
+    else {
+        diff_tcp = msecsDiffTimeMark( s_tm, tm1 );
+        s_tm = tm1;
+        (void)diff_tcp;
+    }
+
+    printf("!!! spent in tcp parse ...");
+    fflush(stdout);
+
     bool fullResp = parseReceivedData( recv );
+
+    timeMark( tm2 );
+    diff = msecsDiffTimeMark( tm1, tm2 );
+
+    printf("---> full=%d,  %d\n", fullResp, diff);
+    //printf("!!! SINCE LAST TCP: %d\n", diff_tcp);
+
     if ( ! fullResp )
         // Wait next chunk
         return;
@@ -2678,8 +2702,24 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
         return;
     }
 
+    quint64 lines = 0;
+    quint64 bytes = 0;
+    for ( int i = 0; i < recv.size(); ++i ) {
+        lines += recv[i].blockData.split("\r\n").size();
+        bytes += recv[i].blockData.size();
+    }
+
+    printf(">>> start db storing (%lld, %lld)... ", lines, bytes);
+    fflush(stdout);
+
+    timeMark(tm1);
+
     // Firstly store all received data into DB
     storeDataIntoDB( recv );
+
+    timeMark(tm2);
+
+    printf("--> %d \n", msecsDiffTimeMark(tm1, tm2));
 
     QList<DataBlock>::Iterator it = recv.begin();
     for ( ; it != recv.end(); ++it ) {
@@ -3693,6 +3733,13 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
                          qPrintable(sql));
             }
 
+            static char s_progress[] = {'|', '/', '-', '\\'};
+            static int s_pos = 0;
+
+            printf("%c", s_progress[ s_pos++ % 4 ]);
+            fflush(stdout);
+
+            printf("\b");
         }
     }
 
@@ -4033,6 +4080,8 @@ bool ADConnection::sendPing ()
         m_resendFilters = true;
         resendADFilters();
     }
+
+    printf(">>>>> PING <<<<\n");
 
     return writeToSock( "ping\r\n\r\n" );
 }

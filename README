@@ -1,16 +1,21 @@
 NAME
-    AlfaDirectAPI - API library to Russian finance broker AlfaDirect
-    http://alfadirect.ru
+    AlfaDirectAPI - asynchronous thread-safe network API library, which tries
+    to cover basic finance market functions of russian broker AlfaDirect
+    (http://alfadirect.ru):
+      - receives historical market quotes and stores them in DB
+      - receives run-time market data
+      - sends market order requests and receives responses
 
-    This is a Qt wrapper over ADAPI.dll and heavy ugly AlfaDirect network
-    protocol.
+    This library is written in C++/Qt4 and uses ADAPI.dll (win32 black box dynamic
+    library which kindly shared by AlfaDirect guys) to encode and decode network
+    stream from broker server. On Unix ADAPI.dll is loaded by Wine, so all basic
+    market data receiving functions work well, but trading won't work, because
+    AlfaDirect uses CryptoPRO as crypto provider for order signing, and for now i
+    have not found any working solution to sign market order successfully on Linux.
 
-    AlfaDirectAPI is still in alpha, i.e. you can receive quotes but you can not
-    place your trade orders (actually this will be developed ASAP).
-
-    As I mentioned earlier this library uses ADAPI.dll (win32 black box dynamic
-    library - public server API, which kindly shared by AlfaDirect guys), but
-    you can still use it on Linux with Wine support.
+    AlfaDirectAPI is still in alpha, so even on Windows trading is broken (actually,
+    order template must be correctly filled in, signed and sent to broker, and this
+    is almost coded)
 
 AUTHOR
     Roman Pen

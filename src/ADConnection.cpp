@@ -3834,8 +3834,6 @@ bool ADConnection::parseAuthResponse ( const ADConnection::DataBlock& block )
 
 bool ADConnection::writeToSock ( const QByteArray& data )
 {
-    Q_ASSERT(m_sock);
-
     bool res = false;
     if ( QThread::currentThread() == this ) {
         tcpWriteToSock(data, res);
@@ -3849,9 +3847,16 @@ bool ADConnection::writeToSock ( const QByteArray& data )
 
 void ADConnection::tcpWriteToSock ( const QByteArray& ba, bool& ret )
 {
-    Q_ASSERT(QThread::currentThread() == this && m_sock);
+    Q_ASSERT(QThread::currentThread() == this);
 
     ret = false;
+
+    // Already closed
+    if ( ! m_sock ) {
+        qWarning("Warning: write to socket failed, because socket object was "
+                 "already closed!");
+        return;
+    }
 
 #ifdef DO_ALL_LOGGING
     // Log everything

@@ -1205,11 +1205,11 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
 
     QSqlQuery query( m_adDB );
     const QString sql =
-        " (SELECT \"paper_no\" FROM AD_PAPERS AS papers "
-        "    WHERE \"p_code\" = ?) "
+        " SELECT \"paper_no\" FROM AD_PAPERS AS papers "
+        "    WHERE \"p_code\" LIKE ? "
         "      UNION "
-        " (SELECT \"paper_no\" FROM AD_ARCHIVE_PAPERS AS arch_papers "
-        "    WHERE \"p_code\" = ?) ";
+        " SELECT \"paper_no\" FROM AD_ARCHIVE_PAPERS AS arch_papers "
+        "    WHERE \"p_code\" LIKE ? ";
 
     // Execute query
     query.prepare( sql );

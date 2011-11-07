@@ -2532,6 +2532,13 @@ void ADConnection::run ()
     if ( m_adDB.isOpen() )
         m_adDB.close();
 
+    // Remove DB from valid connections if connection was created
+    if ( m_adDB.isValid() ) {
+        QString connName = m_adDB.connectionName();
+        m_adDB = QSqlDatabase();
+        QSqlDatabase::removeDatabase( connName );
+    }
+
     // Unload AD lib
     if ( m_adLib->isLoaded() ) {
         if ( m_sessInfo.provCtx ) {

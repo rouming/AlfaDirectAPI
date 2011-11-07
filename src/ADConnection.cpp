@@ -1396,7 +1396,6 @@ bool ADConnection::_sqlGetDBSchema ( QHash<QString, QStringList>& schema )
     foreach ( QString tableName, tables ) {
         QSqlRecord fieldsRec = m_adDB.record( tableName );
         for ( int i = 0; i < fieldsRec.count(); ++i ) {
-            //XXX  QString fieldName = fieldsRec.value(i).toString();
             QString fieldName = fieldsRec.fieldName(i);
 
             tableName.remove(QRegExp("\\s+$"));
@@ -2485,7 +2484,7 @@ void ADConnection::run ()
                           SLOT(tcpWriteToSock(QByteArray)),
                           Qt::QueuedConnection );
 
-        // Start timer
+        // Start ping timer
         pingTimer.start( 5 * 1000 );
 
         // Connect
@@ -2521,11 +2520,14 @@ void ADConnection::run ()
             //XXX NOT IMPLEMENTED itOrd->wakeupAll();
         }
 
+        //XXX NOT IMPLEMENTED CLEAN ALL LISTS AND HASHES
     }
 
+    // Close DB if it was opened
     if ( m_adDB.isOpen() )
         m_adDB.close();
 
+    // Unload AD lib
     if ( m_adLib->isLoaded() ) {
         if ( m_sessInfo.provCtx ) {
             m_adLib->unloadContext( m_sessInfo.provCtx );
@@ -3853,17 +3855,16 @@ void ADConnection::tcpWriteToSock ( const QByteArray& ba, bool& ret )
 
 #ifdef DO_ALL_LOGGING
     // Log everything
-    if ( ba.size() > 0 && m_mainLogFile )
-        {
-            QDateTime now = QDateTime::currentDateTime();
-            QString str( QString(">>> [%1] Sent:\n").arg(now.toString("dd.MM.yyyy hh:mm:ss.zzz")) );
-            // Write header
-            m_mainLogFile->write( str.toLocal8Bit() );
-            // Write data
-            m_mainLogFile->write( ba );
-            m_mainLogFile->write( "\n\n" );
-            m_mainLogFile->flush();
-        }
+    if ( ba.size() > 0 && m_mainLogFile ) {
+        QDateTime now = QDateTime::currentDateTime();
+        QString str( QString(">>> [%1] Sent:\n").arg(now.toString("dd.MM.yyyy hh:mm:ss.zzz")) );
+        // Write header
+        m_mainLogFile->write( str.toLocal8Bit() );
+        // Write data
+        m_mainLogFile->write( ba );
+        m_mainLogFile->write( "\n\n" );
+        m_mainLogFile->flush();
+    }
 #endif
 
     // Feel raw network statistics

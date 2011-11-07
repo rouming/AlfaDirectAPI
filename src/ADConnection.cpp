@@ -699,7 +699,7 @@ bool ADConnection::connect ( const QString& login, const QString& passwd )
 
     QThread::start();
 
-    if ( QThread::isRunning() )
+    if ( ! QThread::isRunning() )
         return false;
 
     return true;
@@ -712,11 +712,7 @@ void ADConnection::disconnect ()
     if ( ! QThread::isRunning() )
         return;
 
-    //XXX Race!! Can't quit thread, if it is not in exec yet.
-    //XXX So, should wait for exec, and _then_ call quit.
-
     QThread::quit();
-    locker.unlock();
     QThread::wait();
 }
 

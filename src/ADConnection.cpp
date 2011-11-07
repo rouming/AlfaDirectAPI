@@ -2544,6 +2544,7 @@ void ADConnection::run ()
     locker.relock();
 
     m_state = DisconnectedState;
+    emit onStateChanged( DisconnectedState );
 
     return;
 }

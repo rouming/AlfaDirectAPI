@@ -3844,15 +3844,8 @@ bool ADConnection::parseAuthResponse ( const ADConnection::DataBlock& block )
 
 bool ADConnection::writeToSock ( const QByteArray& data )
 {
-    bool res = false;
-    if ( QThread::currentThread() == this ) {
-        tcpWriteToSock(data, res);
-        return res;
-    }
-    else {
-        emit onWriteToSock( data );
-        return true;
-    }
+    emit onWriteToSock( data );
+    return true;
 }
 
 void ADConnection::tcpWriteToSock ( const QByteArray& ba, bool& ret )

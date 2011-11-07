@@ -3678,7 +3678,7 @@ bool ADConnection::setMinADDelay ()
 void ADConnection::getADLastSimpleFilterUpdates ( QHash<QString, int>&  lastUpdates )
 {
     foreach ( QString simpleFilter, s_simpleFilters.values() ) {
-        QString sql = "SELECT MAX(%1)+1 FROM %2";
+        QString sql = "SELECT MAX(%1) FROM %2";
         if ( simpleFilter == "papers" )
             sql = sql.arg("\"create_date\"");
         else

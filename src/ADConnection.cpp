@@ -3979,6 +3979,9 @@ bool ADConnection::readFromSock ( QString& data )
 
 bool ADConnection::sendPing ()
 {
+    if ( m_state != ConnectedState )
+        return false;
+
     // Resend filters first ping-time (stupid fucking AD)
     if ( ! m_resendFilters ) {
         m_resendFilters = true;

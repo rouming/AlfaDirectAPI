@@ -1010,6 +1010,11 @@ void ADConnection::_sqlFindFutures ( const QString& futCode,
     Q_ASSERT(QThread::currentThread() == this);
     found = false;
 
+    if ( ! m_adDB.isOpen() ) {
+        qWarning("Warning: can't find futures, DB is closed!");
+        return;
+    }
+
     fut = ADFutures();
     fut.paperCode = futCode;
     fut.paperNo = 0;
@@ -1193,6 +1198,11 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
     if ( papCode.isEmpty() )
         return;
 
+    if ( ! m_adDB.isOpen() ) {
+        qWarning("Warning: can't find paper, DB is closed!");
+        return;
+    }
+
     QSqlQuery query( m_adDB );
     const QString sql =
         " (SELECT \"paper_no\" FROM AD_PAPERS AS papers "
@@ -1285,6 +1295,11 @@ bool ADConnection::_sqlFindActiveOrders ( const QString& accCode,
                                           QList< ADSmartPtr<ADOrderPrivate> >& orders )
 {
     Q_ASSERT(QThread::currentThread() == this);
+
+    if ( ! m_adDB.isOpen() ) {
+        qWarning("Warning: can't find active order, DB is closed!");
+        return false;
+    }
 
     orders.clear();
 

@@ -2246,14 +2246,8 @@ void ADConnection::run ()
 {
     bool res = false;
 
-    // Lock
-    QMutexLocker locker( &m_mutex );
-
     QString login = m_login;
     QString passwd = m_password;
-
-    // Unlock
-    locker.unlock();
 
     // Drop states and flags
     m_lastError = NoError;
@@ -2535,9 +2529,6 @@ void ADConnection::run ()
         }
         m_adLib->unload();
     }
-
-    // Relock
-    locker.relock();
 
     m_state = DisconnectedState;
     emit onStateChanged( DisconnectedState );

@@ -67,3 +67,10 @@ paper_no=5845&period=3&type=8&from_date=2011-04-28 00:00&to_date=2011-06-03 23:5
 
 
 -- getting history data!
+
+
+3.
+
+GET /ads/MsHistData.idc?paper_no=12910&dtime=11%2F10%2F2011+15%3A23&period=0&interval=1&show_today=Y&rnd=5447&dtime_to=11%2F11%2F2011+00%3A00 HTTP/1.1
+
+-- another way to get historical data! is used in Euphoria terminal --

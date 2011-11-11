@@ -4,5 +4,6 @@
         <file alias="AD.sqlite.sql">db/AD.sqlite.sql</file>
         <file alias="AD.mysql.sql">db/AD.mysql.sql</file>
         <file alias="AD.firebird.sql">db/AD.firebird.sql</file>
+        <file alias="cacert.pem">cert/cacert.pem</file>
     </qresource>
 </RCC>

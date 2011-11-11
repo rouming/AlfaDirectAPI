@@ -301,8 +301,14 @@ static ADConnection::Error ADSendHttpsRequest (
     request.setRawHeader("Authorization", headerData.toLocal8Bit());
 
     QNetworkReply* reply = net.get( request );
-    reply->ignoreSslErrors();
     QSslConfiguration conf = reply->sslConfiguration();
+
+    QList<QSslCertificate> certs = QSslCertificate::fromPath(":cacert.pem", QSsl::Pem);
+    if ( ! certs.size() ) {
+        qWarning("Error: can't find CA certificate for alfadirect authorization!");
+        return ADConnection::CertificateError;
+    }
+    conf.setCaCertificates( certs );
     conf.setProtocol( QSsl::AnyProtocol );
     reply->setSslConfiguration( conf );
 

@@ -13,6 +13,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QSslConfiguration>
+#include <QAuthenticator>
 
 #include "ADConnection.h"
 #include "ADSubscription.h"
@@ -284,21 +285,21 @@ static ADConnection::Error ADSendHttpsRequest (
     QEventLoop loop;
     QTimer timer;
     QNetworkAccessManager net;
+    ADCertificateVerifier certVerifier(login, passwd);
 
     // Connect some signal staff
     timer.setSingleShot(true);
     QObject::connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
     QObject::connect(&net, SIGNAL(finished(QNetworkReply*)), &loop, SLOT(quit()));
+    QObject::connect(&net,
+                     SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)),
+                     &certVerifier,
+                     SLOT(onAuthRequired(QNetworkReply*,QAuthenticator*)));
 
     QNetworkRequest request( url );
 
     // Set user agent like real AD client does
     request.setRawHeader("User-Agent", "ADLite56953");
-
-    // Set auth data
-    QByteArray authData = QString(login + ":" + passwd).toLocal8Bit().toBase64();
-    QString headerData = "Basic " + authData;
-    request.setRawHeader("Authorization", headerData.toLocal8Bit());
 
     QNetworkReply* reply = net.get( request );
     QSslConfiguration conf = reply->sslConfiguration();
@@ -348,7 +349,16 @@ static ADConnection::Error ADSendHttpsRequest (
         return ADConnection::SocketError;
     }
 
+    //
     // Success
+    //
+
+    // Verify peer certificate second time
+    // firstly it should be verified in auth request slot
+    if ( ! certVerifier.verifyADCert() ) {
+        qWarning("Error: peer is not AlfaDirect! Certificate is counterfeit!");
+        return ADConnection::SSLCertificateError;
+    }
 
     outData = replyData.toAscii();
     return ADConnection::NoError;
@@ -436,6 +446,57 @@ void GenericReceiver::onChangeOrder ( ADConnection::Order::Operation op,
                                       quint32 pos, float price )
 {
     m_conn->changeOrder( op, pos, price );
+}
+
+/****************************************************************************/
+
+ADCertificateVerifier::ADCertificateVerifier ( const QString& login,
+                                               const QString& passwd ) :
+    m_login(login),
+    m_passwd(passwd),
+    m_peerCertVerified(false)
+{}
+
+bool ADCertificateVerifier::verifyADCert () const
+{
+    if ( !m_peerCertVerified &&
+         (!m_peerCert.isValid() ||
+          m_peerCert.subjectInfo(QSslCertificate::Organization) != "OAO Alfa-Bank" ||
+          m_peerCert.subjectInfo(QSslCertificate::CommonName) != "www.alfadirect.ru" ||
+          m_peerCert.subjectInfo(QSslCertificate::LocalityName) != "Moscow" ||
+          m_peerCert.subjectInfo(QSslCertificate::OrganizationalUnitName) != "Alfa-Direct" ||
+          m_peerCert.subjectInfo(QSslCertificate::CountryName) != "RU" ||
+          m_peerCert.subjectInfo(QSslCertificate::StateOrProvinceName) != "Moscow") ) {
+
+        qWarning("Error: peer is not AlfaDirect! Certificate is counterfeit!");
+        return false;
+    }
+
+    // Mark as verified
+    m_peerCertVerified = true;
+
+    return true;
+}
+
+void ADCertificateVerifier::setPeerCert ( const QSslCertificate& cert )
+{
+    // Drop verification for new cert
+    m_peerCertVerified = false;
+    m_peerCert = cert;
+}
+
+void ADCertificateVerifier::onAuthRequired ( QNetworkReply* reply,
+                                             QAuthenticator* auth )
+{
+    setPeerCert( reply->sslConfiguration().peerCertificate() );
+    if ( ! verifyADCert() ) {
+        qWarning("Error: peer is not AlfaDirect! Certificate is counterfeit! "
+                 "Will not send credentials to peer, just close connection!" );
+        return;
+    }
+
+    auth->setUser( m_login );
+    auth->setPassword( m_passwd );
 }
 
 /****************************************************************************/

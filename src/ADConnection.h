@@ -598,6 +598,31 @@ private:
     class ADConnection* m_conn;
 };
 
+#include <QSslCertificate>
+
+class QNetworkReply;
+class QAuthenticator;
+
+class ADCertificateVerifier : public QObject
+{
+    Q_OBJECT
+public:
+    ADCertificateVerifier ( const QString& login,
+                            const QString& passwd );
+    bool verifyADCert () const;
+    void setPeerCert ( const QSslCertificate& );
+
+public slots:
+    void onAuthRequired ( QNetworkReply* reply,
+                          QAuthenticator* auth );
+
+private:
+    QSslCertificate m_peerCert;
+    QString m_login;
+    QString m_passwd;
+    mutable bool m_peerCertVerified;
+};
+
 class RequestDataPrivate
 {
 public:

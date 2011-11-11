@@ -67,6 +67,8 @@ public:
         CertificateError,
         ContextError,
         SocketError,
+        SSLSocketError,
+        SSLCertificateError,
         ParseHTTPDataError,
         AuthError,
         SQLConnectError,

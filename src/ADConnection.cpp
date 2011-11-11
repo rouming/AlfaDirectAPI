@@ -306,7 +306,7 @@ static ADConnection::Error ADSendHttpsRequest (
     QList<QSslCertificate> certs = QSslCertificate::fromPath(":cacert.pem", QSsl::Pem);
     if ( ! certs.size() ) {
         qWarning("Error: can't find CA certificate for alfadirect authorization!");
-        return ADConnection::CertificateError;
+        return ADConnection::SSLCertificateError;
     }
     conf.setCaCertificates( certs );
     conf.setProtocol( QSsl::AnyProtocol );
@@ -337,12 +337,15 @@ static ADConnection::Error ADSendHttpsRequest (
     // HTTP error
     else if ( reply->isFinished() && reply->error() != QNetworkReply::NoError ) {
         qWarning("HTTP ERROR: some error occured %d", reply->error());
-        return ADConnection::SocketError;
+        if ( reply->error() == QNetworkReply::SslHandshakeFailedError )
+            return ADConnection::SSLSocketError;
+        else
+            return ADConnection::SocketError;
     }
     // Timeout
     else {
-            qWarning("HTTP ERROR: timeout while sending http request!");
-            return ADConnection::SocketError;
+        qWarning("HTTP ERROR: timeout while sending http request!");
+        return ADConnection::SocketError;
     }
 
     // Success

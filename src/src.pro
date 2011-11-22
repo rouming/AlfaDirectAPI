@@ -20,12 +20,14 @@ HEADERS += \
            ADLibrary.h \
            ADSmartPtr.h \
            ADAtomicOps.h \
+           ADTemplateParser.h \
 
 SOURCES += \
            ADConnection.cpp \
            ADSubscription.cpp \
            ADOrder.cpp \
-           ADBootstrap.cpp
+           ADBootstrap.cpp \
+           ADTemplateParser.cpp \
 
 win32:SOURCES += \
            ADLocalLibrary.cpp \

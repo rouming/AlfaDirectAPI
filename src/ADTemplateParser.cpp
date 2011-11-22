@@ -55,7 +55,7 @@ bool ADTemplateParser::findBlock ( const QString& value,
         ++endPos;
     }
 
-    // Ecerything ois ok if block is closed
+    // Ecerything is ok if block is closed
     if ( deep == 0 ) {
         block = work.mid(startPos, endPos - startPos);
         return true;

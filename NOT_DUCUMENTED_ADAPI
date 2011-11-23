@@ -2,7 +2,8 @@
 # Reverse engeneered AlfaDirect terminal protocol
 #
 
-1.
+1. -- getting archive quotes!
+
 GET /ads/find_archive_papers.idc?text=GAZP- HTTP/1.1
 User-Agent: ADLite56953
 Host: www.alfadirect.ru
@@ -25,9 +26,9 @@ Content-Type: text/html
 7053|GZ15500I6|GAZP-9.06_120906CA15500|FORTS|ï¿½ï¿½ï¿½ï¿½ï¿½|0|Y|OPTIONS|OC|09/12/2006
 
 
--- getting archive quotes!
 
-2.
+2. -- getting history data!
+
 intraday 1min
 id=1|ChartDataRequest
 paper_no=5845&period=0&interval=1&type=0&from_date=2011-04-28 00:00&to_date=2011-05-05 00:00
@@ -66,11 +67,20 @@ paper_no=5845&period=3&type=8&from_date=2011-04-28 00:00&to_date=2011-06-03 23:5
 
 
 
--- getting history data!
 
-
-3.
+3. -- another way to get historical data! is used in Euphoria terminal
 
 GET /ads/MsHistData.idc?paper_no=12910&dtime=11%2F10%2F2011+15%3A23&period=0&interval=1&show_today=Y&rnd=5447&dtime_to=11%2F11%2F2011+00%3A00 HTTP/1.1
 
--- another way to get historical data! is used in Euphoria terminal --
+4. -- test signed message on server
+
+POST /ads/sign_test.idc HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: ADLite40713
+Host: www.alfadirect.ru
+Content-Length: <LEN>
+Connection: Keep-Alive
+Cache-Control: no-cache
+Authorization: Basic <AUTH>
+
+test_msg=0x<SIGNED_MSG_IN_HEX>

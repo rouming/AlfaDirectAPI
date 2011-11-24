@@ -31,7 +31,7 @@ struct ADSessionInfo
     int id;
     QByteArray sessionKey;
     QDateTime serverTime;
-    QString certData;
+    QByteArray certData;
     QString nickName;
     QString cspSN;
     QString cspKey;
@@ -62,6 +62,7 @@ public:
     {
         NoError = 0,
         BootstrapError,
+        Windows1251DoesNotExistError,
         DynamicLibLoadError,
         DynamicLibCallError,
         CertificateError,
@@ -415,7 +416,7 @@ private:
     void run ();
     void storeDataIntoDB ( const QList<DataBlock>& recv );
 
-    bool updateSessionInfo ( const QByteArray& );
+    bool updateSessionInfo ( const QString& );
     // Do not lock anything!
     bool _getQuote ( int paperNo, Quote& quote ) const;
     bool _unsubscribeToQuote ( const ADSmartPtr<ADSubscriptionPrivate>& );
@@ -494,6 +495,7 @@ private:
     volatile Error m_lastError;
     volatile State m_state;
 
+    class QTextCodec* m_win1251Codec;
     ADSmartPtr<QFile> m_mainLogFile;
     ADSmartPtr<ADLibrary> m_adLib;
     QSqlDatabase m_adDB;

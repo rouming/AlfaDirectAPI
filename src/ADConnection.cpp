@@ -39,13 +39,13 @@
 // Usage:
 //
 //      QByteArray sign;
-//      do_low_sign( newOrderDoc, QByteArray::fromHex(m_sessInfo.certData.toAscii()),
+//      do_low_sign( newOrderDoc, QByteArray::fromHex(m_sessInfo.certData),
 //                       sign, OID_HashVerbaO, 1, 0, 0);
 // or:
-//      do_sign( newOrderDoc, QByteArray::fromHex(m_sessInfo.certData.toAscii()),
+//      do_sign( newOrderDoc, QByteArray::fromHex(m_sessInfo.certData),
 //                        sign, 0, OID_HashVerbaO);
 // do not forget:
-//      sign = QString(QString("0x") + QString(sign.toHex().toUpper())).toAscii();
+//      sign = QString(QString("0x") + QString(sign.toHex().toUpper())).toLatin1();
 //
 /****************************************************************************/
 
@@ -280,7 +280,7 @@ static ADConnection::Error ADSendHttpsRequest (
     const QString& url,
     const QString& login,
     const QString& passwd,
-    QByteArray& outData )
+    QString& outData )
 {
     QEventLoop loop;
     QTimer timer;
@@ -360,7 +360,7 @@ static ADConnection::Error ADSendHttpsRequest (
         return ADConnection::SSLCertificateError;
     }
 
-    outData = replyData.toAscii();
+    outData = replyData;
     return ADConnection::NoError;
 }
 
@@ -691,6 +691,7 @@ bool ADConnection::dateTimeToADTime ( const QDateTime& dt, int& adTime )
 ADConnection::ADConnection () :
     m_lastError(NoError),
     m_state(DisconnectedState),
+    m_win1251Codec(0),
 #ifdef _WIN_
     m_adLib( ADSmartPtr<ADLibrary>(new ADLocalLibrary) ),
 #else
@@ -1009,7 +1010,8 @@ bool ADConnection::requestHistoricalQuotes ( int paperNo,
     // Unlock
     wLocker.unlock();
 
-    bool res = writeToSock( cmd.toAscii() );
+    // Write to server in latin1
+    bool res = writeToSock( cmd.toLatin1() );
     if ( ! res ) {
         m_requests->remove(m_reqId);
     }
@@ -1306,13 +1308,13 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
         QString url = QString("https://www.alfadirect.ru/ads/find_archive_papers.idc?text=%1").arg(papCode);
 
         // Send https request
-        QByteArray data;
-        Error err = ADSendHttpsRequest(url, m_login, m_password, data);
+        QString response;
+        Error err = ADSendHttpsRequest(url, m_login, m_password, response);
         if ( err != NoError )
             return;
 
         // Parse reply data
-        QStringList lines = QString(data).split("\n", QString::SkipEmptyParts);
+        QStringList lines = response.split("\n", QString::SkipEmptyParts);
         for ( QStringList::Iterator it = lines.begin();
               it != lines.end(); ++it ) {
             QString& line = *it;
@@ -1612,7 +1614,7 @@ void ADConnection::changeOrder ( ADConnection::Order::Operation op,
         arg(newPriceInt).
         arg(newDropDt).
         arg(signDt).
-        toAscii();
+        toLatin1();
 
     //
     // Make signature
@@ -1675,7 +1677,7 @@ void ADConnection::changeOrder ( ADConnection::Order::Operation op,
     //
     // Send
     //
-    bool res = writeToSock( cmd.toAscii() );
+    bool res = writeToSock( cmd.toLatin1() );
     if ( ! res ) {
         qWarning("send failed!");
         // Lock
@@ -1804,7 +1806,7 @@ void ADConnection::cancelOrder ( ADConnection::Order::Operation op )
         arg(order->getOrderQty()).
         arg(operationStr).
         arg(signDt).
-        toAscii();
+        toLatin1();
 
     //
     // Make signature
@@ -1854,7 +1856,7 @@ void ADConnection::cancelOrder ( ADConnection::Order::Operation op )
     //
     // Send
     //
-    bool res = writeToSock( cmd.toAscii() );
+    bool res = writeToSock( cmd.toLatin1() );
     if ( ! res ) {
         qWarning("send failed!");
         // Lock
@@ -2238,11 +2240,11 @@ bool ADConnection::getCachedTemplateDocument ( const QString& docName,
     }
 }
 
-bool ADConnection::updateSessionInfo ( const QByteArray& ba )
+bool ADConnection::updateSessionInfo ( const QString& infoStr )
 {
     bool res = false;
 
-    QStringList fields = QString(ba.data()).split("|");
+    QStringList fields = infoStr.split("|");
     if ( fields.size() < 15 ) {
         qWarning("Wrong buffer!");
         return false;
@@ -2257,13 +2259,15 @@ bool ADConnection::updateSessionInfo ( const QByteArray& ba )
         qWarning("can't parse id!");
         return false;
     }
-    info.sessionKey = QByteArray::fromHex( fields[2].toAscii() );
+    // Session key in latin1 (actually it is in hex string representation)
+    info.sessionKey = QByteArray::fromHex( fields[2].toLatin1() );
     int adTime = fields[3].toInt(&ok);
     if ( ! ok || ! ADTimeToDateTime(adTime, info.serverTime) ) {
         qWarning("can't parse server time!");
         return false;
     }
-    info.certData = fields[4];
+    // Cert data in latin1 (actually it is in hex string representation)
+    info.certData = fields[4].toLatin1();
     info.nickName = fields[6];
     info.cspSN = fields[7];
     info.cspKey = fields[8];
@@ -2298,8 +2302,8 @@ bool ADConnection::updateSessionInfo ( const QByteArray& ba )
     }
 
     // Load certificate
-    QByteArray cert = info.certData.toAscii();
-    res = m_adLib->loadCertificate( cert.data(), cert.size(), &info.certCtx );
+    res = m_adLib->loadCertificate( info.certData.data(), info.certData.size(),
+                                    &info.certCtx );
     if ( ! res || info.certCtx == 0 ) {
         qWarning("can't load certificate!");
         m_lastError = CertificateError;
@@ -2342,6 +2346,14 @@ void ADConnection::run ()
     m_sockEncBuffer.clear();
     m_sessInfo = ADSessionInfo();
     m_adDB = QSqlDatabase();
+    m_win1251Codec = QTextCodec::codecForName("Windows-1251");
+
+    // Check encoding support
+    if ( !m_win1251Codec ) {
+        qWarning("Error: can't find Windows-1251 encoding");
+        m_lastError = Windows1251DoesNotExistError;
+        goto clean;
+    }
 
     // Do bootstraping
     {
@@ -2475,15 +2487,15 @@ void ADConnection::run ()
                     //Url from AD terminal.
                     "vers=3.5.1.5&cpcsp_eval=0&cpcsp_ver=3.6");
         // Send https request
-        QByteArray data;
-        Error err = ADSendHttpsRequest(url, m_login, m_password, data);
+        QString response;
+        Error err = ADSendHttpsRequest(url, m_login, m_password, response);
         if ( err != NoError ) {
             m_lastError = err;
             goto clean;
         }
 
         // Parse data
-        res = updateSessionInfo( data );
+        res = updateSessionInfo( response );
         if ( ! res ) {
             m_lastError = ParseHTTPDataError;
             qWarning("HTTP response is invalid!");
@@ -2883,8 +2895,7 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
         }
         /// Parse system responses
         else if ( it->blockName.contains(ADBlockName::MSG_ID) ) {
-            // Split in local8Bit encoding to handle correctly russian language
-            QStringList cols = QString(it->blockData.toLocal8Bit()).split("|");
+            QStringList cols = it->blockData.split("|");
             if ( cols.size() < 2 ) {
                 qWarning("Wrong block '%s': block data is wrong!", qPrintable(it->blockName));
                 continue;
@@ -3844,23 +3855,22 @@ bool ADConnection::parseReceivedData ( QList<DataBlock>& outRecv )
 
 #ifdef DO_ALL_LOGGING
     // Log everything
-    if ( outRecv.size() > 0 && m_mainLogFile )
-        {
-            QDateTime now = QDateTime::currentDateTime();
-            QString str( QString("<<< [%1] Received:\n").arg(now.toString("dd.MM.yyyy hh:mm:ss.zzz")) );
-            // Write header
-            m_mainLogFile->write( str.toAscii() );
-            QList<DataBlock>::Iterator it = outRecv.begin();
-            for ( ; it != outRecv.end(); ++it ) {
-                // Write block
-                DataBlock& db = *it;
-                m_mainLogFile->write( db.blockName.toLocal8Bit() );
-                m_mainLogFile->write( "\n" );
-                m_mainLogFile->write( db.blockData.toLocal8Bit() );
-                m_mainLogFile->write( "\n\n" );
-            }
-            m_mainLogFile->flush();
+    if ( outRecv.size() > 0 && m_mainLogFile ) {
+        QDateTime now = QDateTime::currentDateTime();
+        QString str( QString("<<< [%1] Received:\n").arg(now.toString("dd.MM.yyyy hh:mm:ss.zzz")) );
+        // Write header in system encoding
+        m_mainLogFile->write( str.toLocal8Bit() );
+        QList<DataBlock>::Iterator it = outRecv.begin();
+        for ( ; it != outRecv.end(); ++it ) {
+            // Write block
+            DataBlock& db = *it;
+            m_mainLogFile->write( db.blockName.toLocal8Bit() );
+            m_mainLogFile->write( "\n" );
+            m_mainLogFile->write( db.blockData.toLocal8Bit() );
+            m_mainLogFile->write( "\n\n" );
         }
+        m_mainLogFile->flush();
+    }
 #endif
 
     return (outRecv.size() != 0);
@@ -3881,7 +3891,8 @@ void ADConnection::sendAuthRequest ()
     QString auth( "auth\r\n" + QString(connType) + "|" + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm") +
                   "|ADPRC|0|" + m_login + "|" + QString("%1").arg(m_sessInfo.id) +
                   "\r\n\r\n");
-    res = writeToSock( auth.toAscii() );
+    // Write to server in latin1
+    res = writeToSock( auth.toLatin1() );
     if ( ! res ) {
         qWarning("send failed!");
         QThread::quit();
@@ -3906,8 +3917,8 @@ bool ADConnection::parseAuthResponse ( const ADConnection::DataBlock& block )
         return false;
     }
 
-    // Set encoding type
-    m_sessInfo.encType = authResp[0].toAscii();
+    // Set encoding type in latin1
+    m_sessInfo.encType = authResp[0].toLatin1();
 
     return true;
 }
@@ -3936,7 +3947,7 @@ void ADConnection::tcpWriteToSock ( const QByteArray& ba, bool& ret )
     if ( ba.size() > 0 && m_mainLogFile ) {
         QDateTime now = QDateTime::currentDateTime();
         QString str( QString(">>> [%1] Sent:\n").arg(now.toString("dd.MM.yyyy hh:mm:ss.zzz")) );
-        // Write header
+        // Write header in system encoding
         m_mainLogFile->write( str.toLocal8Bit() );
         // Write data
         m_mainLogFile->write( ba );
@@ -3988,12 +3999,6 @@ bool ADConnection::readFromSock ( QString& data )
         return false;
     }
 
-    static QTextCodec* s_codec = QTextCodec::codecForName("Windows-1251");
-    if ( ! s_codec ) {
-        qWarning("Can't find codec WIN-1251");
-        return false;
-    }
-
     // Feel raw network statistics
     atomic_add64(&m_statRxNet, ba.size());
 
@@ -4001,7 +4006,7 @@ bool ADConnection::readFromSock ( QString& data )
     if ( m_sessInfo.encType.size() == 0 ) {
         // Feel decoded statistics
         atomic_add64(&m_statRxDecoded, ba.size());
-        data = s_codec->toUnicode(ba);
+        data = m_win1251Codec->toUnicode(ba);
         return true;
     }
 
@@ -4033,7 +4038,7 @@ bool ADConnection::readFromSock ( QString& data )
     // Remove already parsed data
     m_sockEncBuffer = m_sockEncBuffer.right( m_sockEncBuffer.size() - parsed );
 
-    data = s_codec->toUnicode(ptr, sz);
+    data = m_win1251Codec->toUnicode(ptr, sz);
     m_adLib->freeMemory( ptr );
 
     return true;
@@ -4119,7 +4124,8 @@ bool ADConnection::sendADFilters (
 
         QString filterStr = QString("SetFilter\r\n%1\r\n\r\n").arg( filters.join("&") );
 
-        return writeToSock( filterStr.toAscii() );
+        // Write to socket in latin1
+        return writeToSock( filterStr.toLatin1() );
     }
     else
         // Nothing to do

@@ -1597,7 +1597,9 @@ void ADConnection::changeOrder ( ADConnection::Order::Operation op,
     QString dropDt = order->getOrderDropDateTime().toString("dd/MM/yyyy");
     QString dropDtHHMM = order->getOrderDropDateTime().toString("dd/MM/yyyy hh:mm");
     QString newDropDt = dropDt;
-    QString operationStr = (order->getOrderType() == Order::Buy ? "купить" : "продать");
+    QString operationStr = (order->getOrderType() == Order::Buy ?
+                            QString::fromUtf8("РєСѓРїРёС‚СЊ") :
+                            QString::fromUtf8("РїСЂРѕРґР°С‚СЊ"));
     QString operationCh = (order->getOrderType() == Order::Buy ? "B" : "S");
     int priceInt = (int)order->getOrderPrice();
     int newPriceInt = (int)newPrice;
@@ -1795,7 +1797,9 @@ void ADConnection::cancelOrder ( ADConnection::Order::Operation op )
 
     QDateTime now = QDateTime::currentDateTime();
     QString signDt = now.toString("dd/MM/yyyy hh:mm");
-    QString operationStr = (order->getOrderType() == Order::Buy ? "Покупка" : "Продажа");
+    QString operationStr = (order->getOrderType() == Order::Buy ?
+                            QString::fromUtf8("РџРѕРєСѓРїРєР°") :
+                            QString::fromUtf8("РџСЂРѕРґР°Р¶Р°"));
     int priceInt = (int)order->getOrderPrice();
     QString XXX_portfolio = "XXX-0000";
 
@@ -2931,13 +2935,13 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                 }
                 // Handle broker sucess response for 1 phase
                 else if ( orderPhasePtr.second == 1 &&
-                          cols[1].contains(QRegExp("^Заявка принята к исполнению$")) ) {
+                          cols[1].contains(QRegExp(QString::fromUtf8("^Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р° Рє РёСЃРїРѕР»РЅРµРЅРёСЋ$"))) ) {
                     orderPhasePtr.second = 2;
                     continue;
                 }
                 // Handle exchange sucess response for 2 phase
                 else if ( orderPhasePtr.second == 2 &&
-                          cols[1].contains(QRegExp("принята Системой.$")) ) {
+                          cols[1].contains(QRegExp(QString::fromUtf8("РїСЂРёРЅСЏС‚Р° РЎРёСЃС‚РµРјРѕР№.$"))) ) {
                     if ( cols.size() < 5 ) {
                         qWarning("!!!! Response on request id '%d' is wrong!", id);
                         //XXX I don't know what to do in this case!
@@ -3003,13 +3007,13 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                 }
                 // Handle broker sucess response for 1 phase
                 else if ( orderPhasePtr.second == 1 &&
-                          cols[1].contains(QRegExp("^Заявка принята к изменению$")) ) {
+                          cols[1].contains(QRegExp(QString::fromUtf8("^Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р° Рє РёР·РјРµРЅРµРЅРёСЋ$"))) ) {
                     orderPhasePtr.second = 2;
                     continue;
                 }
                 // Handle exchange sucess response for 2 phase
                 else if ( orderPhasePtr.second == 2 &&
-                          cols[1].contains(QRegExp("успешно изменена,")) ) {
+                          cols[1].contains(QRegExp(QString::fromUtf8("СѓСЃРїРµС€РЅРѕ РёР·РјРµРЅРµРЅР°,"))) ) {
                     if ( cols.size() < 5 ) {
                         qWarning("!!!! Response on request id '%d' is wrong!", id);
                         //XXX I don't know what to do in this case!
@@ -3079,14 +3083,14 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                 }
                 // Handle broker sucess response for 1 phase
                 else if ( orderPhasePtr.second == 1 &&
-                          cols[1].contains(QRegExp("^Заявка принята к удалению$")) ) {
+                          cols[1].contains(QRegExp(QString::fromUtf8("^Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р° Рє СѓРґР°Р»РµРЅРёСЋ$"))) ) {
                     orderPhasePtr.second = 2;
                     continue;
                 }
                 // Handle exchange sucess response for 2 phase
                 else if ( orderPhasePtr.second == 2 &&
-                          (cols[1].contains(QRegExp("помечена к удалению.$")) ||
-                           cols[1].contains(QRegExp("уже удалена.$"))) ) {
+                          (cols[1].contains(QRegExp(QString::fromUtf8("РїРѕРјРµС‡РµРЅР° Рє СѓРґР°Р»РµРЅРёСЋ.$"))) ||
+                           cols[1].contains(QRegExp(QString::fromUtf8("СѓР¶Рµ СѓРґР°Р»РµРЅР°.$")))) ) {
                     if ( cols.size() < 5 ) {
                         qWarning("!!!! Response on request id '%d' is wrong!", id);
                         //XXX I don't know what to do in this case!

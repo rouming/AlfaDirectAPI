@@ -3793,6 +3793,14 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
             QStringList colsNames;
             QStringList colsNamesEsc;
             QStringList colsValues;
+
+            if ( cols.size() == 1 ) {
+                qWarning("Error: single column %s for block %s, will skip!",
+                         qPrintable(cols[0]),
+                         qPrintable(blockName));
+                continue;
+            }
+
             for ( int i = 0, j = 0; j < cols.size() && i < tableFields.size(); ++i ) {
                 if ( isHistQuotesStream && tableFields[i] == histQuotes_timeFrameKey )
                     colsValues.append(QString("%1").arg(histQuotes_timeFrameVal));

@@ -8,6 +8,7 @@ class ADTemplateParser
 public:
     bool addParam ( const QString& key, const QString& val );
     QString parse ( const QString& doc ) const;
+    const QHash<QString, QString>& params () const;
 
 private:
     bool findBlock ( const QString& value,

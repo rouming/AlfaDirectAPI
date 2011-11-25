@@ -20,6 +20,12 @@ QString ADTemplateParser::parse ( const QString& doc ) const
     return lastResult;
 }
 
+// Returns inner map
+const QHash<QString, QString>& ADTemplateParser::params () const
+{
+    return m_params;
+}
+
 // Try to find block between chars and return it
 bool ADTemplateParser::findBlock ( const QString& value,
                                    char begin,

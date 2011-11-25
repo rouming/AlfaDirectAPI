@@ -458,7 +458,9 @@ private:
     bool _sqlGetCurrentPosition ( const QString& accCode, const QString& paperCode,
                                   Position& );
     bool _sqlGetDBSchema ( QHash<QString, QStringList>& );
-
+    bool _sqlExecSelect ( const QString& tableName,
+                         const QMap<QString, QVariant>& search,
+                         QSqlQuery& resQuery ) const;
     bool sqlLogQuote ( bool updateType, const QDateTime& nowDt,
                        const ADFutures& fut, const ADConnection::Quote& futQuote,
                        const ADOption& opt, const ADConnection::Quote& optQuote,

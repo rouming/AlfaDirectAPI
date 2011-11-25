@@ -19,6 +19,7 @@
 #include "ADSubscription.h"
 #include "ADOrder.h"
 #include "ADBootstrap.h"
+#include "ADTemplateParser.h"
 
 #ifdef _WIN_
  #include "ADLocalLibrary.h"
@@ -1490,6 +1491,39 @@ bool ADConnection::_sqlGetDBSchema ( QHash<QString, QStringList>& schema )
     return (schema.size() > 0);
 }
 
+bool ADConnection::_sqlExecSelect (
+    const QString& tableName,
+    const QMap<QString, QVariant>& search,
+    QSqlQuery& resQuery ) const
+{
+    Q_ASSERT(QThread::currentThread() == this );
+
+    QStringList keys = search.keys();
+
+    QStringList where;
+    for ( int i = 0; i < keys.size(); ++i ) {
+        where.append(QString("t.\"%1\" = :%2").arg(keys[i]).arg(i));
+    }
+
+    QString sql = QString("SELECT * FROM \"%1\" AS t WHERE %2").
+        arg(tableName).
+        arg(where.join(" AND "));
+
+    QSqlQuery query( m_adDB );
+    query.prepare( sql );
+    foreach ( const QString& key, keys ) {
+        query.addBindValue(search[key]);
+    }
+
+    if ( ! query.exec() ) {
+        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        return false;
+    }
+
+    resQuery = query;
+    return true;
+}
+
 void ADConnection::lockForRead ()
 {
     m_rwLock.lockForRead();
@@ -1938,136 +1972,272 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
     Q_ASSERT(order.isValid());
     ADConnection::RequestId reqId = op.m_op->getRequestId();
 
-    const QString newOrderName("new_order");
-    QByteArray newOrderDoc;
-    //XXX TURN OFF CACHE FOR NOW!
-    if ( 0 && ! getCachedTemplateDocument(newOrderName, newOrderDoc) ) {
-        qWarning("Error: can't get template '%s'!", qPrintable(newOrderName));
+    //XXX
+    QString accCode = "13272-000";
+    QString placeCode = "FORTS";
 
-        // Lock
-        QWriteLocker wLocker( &m_rwLock );
-        Q_ASSERT(m_ordersOperations->contains(reqId));
-        OrderOpWithPhase orderPhasePtr = m_ordersOperations->take(reqId);
-        // To cancelled
-        Order::State oldState = order->getOrderState();
-        order->setOrderState( Order::CancelledState );
-        op.m_op->wakeUpAll( Order::ErrorResult );
-        // Unlock
-        wLocker.unlock();
-        emit onOrderStateChanged( ADConnection::Order(order),
-                                  oldState,
-                                  Order::CancelledState );
-        emit onOrderOperationResult( ADConnection::Order(order),
-                                     op,
-                                     Order::ErrorResult );
+    ADTemplateParser dp;
+    QSqlQuery query;
+    QMap<QString, QVariant> where;
+    QSqlRecord row;
+    double multdiv = 0.0;
+    QDateTime dt;
+    QString tmplDoc;
+    QByteArray sign;
+    QString cmd;
+    bool res = false;
+    unsigned int size = 0;
+    char* data = 0;
 
-        return;
+    // Get new_order template
+    where.insert("doc_id", "new_order");
+    if ( !_sqlExecSelect("AD_DOC_TEMPLATES", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+    tmplDoc = row.value("data").toString().replace("\r", "\r\n");
+    if ( tmplDoc.isEmpty() ) {
+        qWarning("Error: template document is empty!");
+        goto err;
     }
 
-    //
-    // XXX Create template manually!
-    //
+    dp.addParam("blank", "L");
+    dp.addParam("b_s", (order->getOrderType() == Order::Buy ? "B" : "S"));
+    dp.addParam("acc_code", accCode);
+    dp.addParam("place_code", placeCode);
+    dp.addParam("p_code", order->getOrderPaperCode());
+    dp.addParam("price_currency", "RUR");
+    dp.addParam("limits_check", "Y");
+    dp.addParam("drop_cond", "Y");
+    dp.addParam("ch_drop_time", order->getOrderDropDateTime().toString("dd/MM/yyyy hh:mm"));
+    dp.addParam("price", QString("%1").arg(order->getOrderPrice()));
+    dp.addParam("paper_qty", QString("%1").arg(order->getOrderQty()));
 
-    QString newOrderDocStr = "XXX: TODO";
+    // Get papers
+    where.insert("p_code", order->getOrderPaperCode());
+    where.insert("place_code", placeCode);
+    if ( !_sqlExecSelect("AD_PAPERS", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
 
-    QDateTime now = QDateTime::currentDateTime();
-    QString signDt = now.toString("dd/MM/yyyy hh:mm");
-    QString dropDt = order->getOrderDropDateTime().toString("dd/MM/yyyy hh:mm");
-    QString operationStr = (order->getOrderType() == Order::Buy ? "купить" : "продать");
-    QString operationCh = (order->getOrderType() == Order::Buy ? "B" : "S");
-    int priceInt = (int)order->getOrderPrice();
-    QString XXX_portfolio = "XXX-0000";
+    row = query.record();
+    if ( !row.contains("ts_p_code") ||
+         row.isNull("ts_p_code") ||
+         !row.value("ts_p_code").isValid() ||
 
-    newOrderDoc = newOrderDocStr.
-        arg(XXX_portfolio).
-        arg(operationStr).
-        arg(order->getOrderQty()).
-        arg(priceInt).
-        arg(dropDt).
-        arg(signDt).
-        toAscii();
+         !row.contains("mat_date") ||
+         row.isNull("mat_date") ||
+         !row.value("mat_date").isValid() ) {
+        goto err;
+    }
+
+    dp.addParam("ts_p_code", row.value("ts_p_code").toString());
+    dp.addParam("mat_date", row.value("mat_date").toDateTime().toString("dd/MM/yyyy"));
+
+    // Get subbaccount
+    where.insert("acc_code", accCode);
+    if ( !_sqlExecSelect("AD_SUB_ACCOUNTS", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+    if ( !row.contains("treaty") ||
+         row.isNull("treaty") ||
+         !row.value("treaty").isValid() ) {
+        goto err;
+    }
+
+    dp.addParam("treaty", row.value("treaty").toString());
+
+    // Get account
+    where.insert("treaty", row.value("treaty").toInt());
+    if ( !_sqlExecSelect("AD_ACCOUNTS", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+    if ( !row.contains("full_name") ||
+         row.isNull("full_name") ||
+         !row.value("full_name").isValid() ) {
+        goto err;
+    }
+
+    dp.addParam("client_name", row.value("full_name").toString());
+
+
+    // Get trade_places
+    where.insert("place_code", placeCode);
+    if ( !_sqlExecSelect("AD_TRADE_PLACES", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+    if ( !row.contains("market_name") ||
+         row.isNull("market_name") ||
+         !row.value("market_name").isValid() ||
+
+         !row.contains("place_name") ||
+         row.isNull("place_name") ||
+         !row.value("place_name").isValid() ) {
+        goto err;
+    }
+
+    dp.addParam("market_name", row.value("market_name").toString().trimmed());
+    dp.addParam("place_name", row.value("place_name").toString().trimmed());
+    dp.addParam("dp_name", row.value("dp_name").toString().trimmed());
+
+    // Get position
+    where.insert("acc_code", accCode);
+    where.insert("place_code", placeCode);
+    if ( _sqlExecSelect("AD_POSITIONS", where, query) && query.next() ) {
+        row = query.record();
+        if ( row.contains("depo_account") &&
+             !row.isNull("depo_account") &&
+             row.value("depo_account").isValid() )
+            dp.addParam("depo_account", row.value("depo_acc").toString());
+    }
+    where.clear();
+
+
+    // Get actives
+    where.insert("p_code", order->getOrderPaperCode());
+    if ( !_sqlExecSelect("AD_ACTIVES", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+    if (
+         !row.contains("at_code") ||
+         row.isNull("at_code") ||
+         !row.value("at_code").isValid() ||
+
+         !row.contains("at_name") ||
+         row.isNull("at_name") ||
+         !row.value("at_name").isValid() ||
+
+         !row.contains("em_code") ||
+         row.isNull("em_code") ||
+         !row.value("em_code").isValid() ) {
+        goto err;
+    }
+
+    dp.addParam("reg_code", row.value("reg_code").toString());
+    dp.addParam("at_code", row.value("at_code").toString());
+    dp.addParam("at_name", row.value("at_name").toString());
+    dp.addParam("contr_descr", row.value("contr_descr").toString());
+    if ( !row.contains("divid") ||
+         row.isNull("divid") ||
+         !row.value("divid").isValid() ||
+         row.value("divid").toDouble() == 0.0 ||
+
+         !row.contains("mult") ||
+         row.isNull("mult") ||
+         !row.value("mult").isValid() ||
+         row.value("mult").toDouble() == 0.0 )
+        multdiv = 0.0;
+    else
+        multdiv = row.value("mult").toDouble() / row.value("divid").toDouble();
+
+    dp.addParam("mult_div", QString("%1").arg(multdiv));
+
+    if ( row.contains("strike") &&
+         !row.isNull("strike") &&
+         row.value("strike").isValid() )
+        dp.addParam("strike", row.value("strike").toString());
+
+    // Get emitents
+    where.insert("em_code", row.value("em_code").toString());
+    if ( !_sqlExecSelect("AD_EMITENTS", where, query) || !query.next() ) {
+        qWarning("Error: can't find valid row in AD_EMITENTS table!");
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+    if ( !row.contains("full_name") ||
+         row.isNull("full_name") ||
+         !row.value("full_name").isValid() ) {
+        qWarning("Error: can't find full_name field!");
+        goto err;
+    }
+
+    dp.addParam("em_name", row.value("full_name").toString().trimmed());
+    dp.addParam("manager_name", m_sessInfo.fullName);
+    dp.addParam("sys_name", m_login);
+
+    dt = QDateTime::currentDateTime();
+    dp.addParam("sign_time", dt.toString("dd/MM/yyyy hh:mm"));
+
+    // Parse and convert to Windows-1251
+    sign = m_win1251Codec->fromUnicode( dp.parse(tmplDoc) );
 
     //
     // Make signature
     //
-    unsigned int size = 0;
-    char* data = 0;
-    bool signRes = m_adLib->makeSignature(m_sessInfo.provCtx, m_sessInfo.certCtx,
-                                          newOrderDoc.data(), newOrderDoc.size(),
-                                          &data, &size);
-    if ( ! signRes || data == 0 || size == 0 ) {
+    res = m_adLib->makeSignature(m_sessInfo.provCtx, m_sessInfo.certCtx,
+                                 sign.data(), sign.size(),
+                                 &data, &size);
+    if ( !res || data == 0 || size == 0 ) {
         qWarning("Error while sign!");
-        // Lock
-        QWriteLocker wLocker( &m_rwLock );
-        Q_ASSERT(m_ordersOperations->contains(reqId));
-        OrderOpWithPhase orderPhasePtr = m_ordersOperations->take(reqId);
-        // To cancelled
-        Order::State oldState = order->getOrderState();
-        order->setOrderState( Order::CancelledState );
-        op.m_op->wakeUpAll( Order::ErrorResult );
-        // Unlock
-        wLocker.unlock();
-        emit onOrderStateChanged( ADConnection::Order(order),
-                                  oldState,
-                                  Order::CancelledState );
-        emit onOrderOperationResult( ADConnection::Order(order),
-                                     op,
-                                     Order::ErrorResult );
-
-        return;
+        goto err;
     }
-    QByteArray sign( data, size );
+
+    sign = QByteArray( data, size );
     m_adLib->freeMemory( data );
 
     //
     // Create url
     //
-    //XXXX
-    QString cmd("id=%1|NewOrder\r\n"
-                "is_new_template=Y&limits_check=Y&ch_drop_time=%2&"
-                "place_code=FORTS&p_code=RTSI-3.10&paper_no=29485&price_currency=RUR&"
-                "acc_code=%3&sign_time=%4&b_s=%5&blank=L&price=%6&"
-                "paper_qty=%7&sign=%8\r\n\r\n");
-    cmd = cmd.
-        arg(reqId).
-        arg(dropDt).
-        arg(XXX_portfolio).
-        arg(signDt).
-        arg(operationCh).
-        arg(priceInt).
-        arg(order->getOrderQty()).
-        arg(sign.data());
+    cmd =
+        "id=" + QString("%1").arg(reqId) + "|NewOrder\r\n" +
+        "blank=" + dp.params()["blank"] +
+        "&b_s=" + dp.params()["b_s"] +
+        "&acc_code=" + dp.params()["acc_code"] +
+        "&place_code=" + dp.params()["place_code"] +
+        "&p_code=" + dp.params()["p_code"] +
+        "&price_currency=" + dp.params()["price_currency"] +
+        "&ch_drop_time=" + dp.params()["ch_drop_time"] +
+        "&price=" + dp.params()["price"] +
+        "&paper_qty=" + dp.params()["paper_qty"] +
+        "&sign=" + QString(sign) +
+        "&sign_time=" + dp.params()["sign_time"] +
+        "&is_new_template=Y";
 
-    //
-    // Send
-    //
-    //XXX printf("!!! SIGNED: \n#%s#\n#%s#\n\n", newOrderDoc.data(), qPrintable(cmd));
-    //XXX fflush(stdout);
-
-    bool res = writeToSock( cmd.toAscii() );
+    res = writeToSock( cmd.toLatin1() );
     if ( ! res ) {
-        qWarning("send failed!");
-        // Lock
-        QWriteLocker wLocker( &m_rwLock );
-        Q_ASSERT(m_ordersOperations->contains(reqId));
-        OrderOpWithPhase orderPhasePtr = m_ordersOperations->take(reqId);
-        // To cancelled
-        Order::State oldState = order->getOrderState();
-        order->setOrderState( Order::CancelledState );
-        op.m_op->wakeUpAll( Order::ErrorResult );
-        // Unlock
-        wLocker.unlock();
-        emit onOrderStateChanged( ADConnection::Order(order),
-                                  oldState,
-                                  Order::CancelledState );
-        emit onOrderOperationResult( ADConnection::Order(order),
-                                     op,
-                                     Order::ErrorResult );
-
-        QThread::quit();
-        return;
+        goto err;
     }
+
+    return;
+
+err:
+    // Lock
+    QWriteLocker wLocker( &m_rwLock );
+
+    Q_ASSERT(m_ordersOperations->contains(reqId));
+    OrderOpWithPhase orderPhasePtr = m_ordersOperations->take(reqId);
+    // To cancel
+    Order::State oldState = order->getOrderState();
+    order->setOrderState( Order::CancelledState );
+    op.m_op->wakeUpAll( Order::ErrorResult );
+    // Unlock
+    wLocker.unlock();
+
+    emit onOrderStateChanged( ADConnection::Order(order),
+                              oldState,
+                              Order::CancelledState );
+    emit onOrderOperationResult( ADConnection::Order(order),
+                                 op,
+                                 Order::ErrorResult );
 }
+
 
 bool ADConnection::logQuote ( bool isFutUpdate, const QDateTime& nowDt,
                               const ADFutures& fut, const ADConnection::Quote& futQuote,

@@ -10,15 +10,28 @@
 
 /****************************************************************************/
 
+// Validate constant condition on compilation stage
+#define COMPILE_ASSERT(condition) \
+    extern void __compile_assert_dummy(char a[1 - 2*!(condition)])
+
+/****************************************************************************/
+
+// Actually can't work on x64
+// Interface of LoadContext, UnloadContext, MakeSignature is wrong:
+//    it accepts `unsigned int` as provider context, but not a void*
+COMPILE_ASSERT(sizeof(void*) == 4);
+
+/****************************************************************************/
+
 struct ADLibrarySyms
 {
     typedef BOOL (WINAPI *Encode) (const BYTE* pEncodingType, const SIZE_T cEncodingTypeSize, const BYTE* pKey, const BYTE* pData, const SIZE_T cDataSize, BYTE** pResultData, SIZE_T* pcResultSize);
     typedef BOOL (WINAPI *Decode) (const BYTE* pEncodingType, const SIZE_T cEncodingTypeSize, const BYTE* pKey, BYTE* pData, const SIZE_T cDataSize, BYTE** pResultData, SIZE_T* pcResultSize, SIZE_T* pcParsedSize);
     typedef BOOL (WINAPI *LoadCertificate) (const BYTE* pCertData, const int cCertDataSize, void** ppCertContext);
     typedef BOOL (WINAPI *UnloadCertificate) (const void* pCertContext);
-    typedef BOOL (WINAPI *LoadContext) (const void* pCertContext, unsigned int* provContext);
-    typedef BOOL (WINAPI *UnloadContext) (unsigned int provContext);
-    typedef BOOL (WINAPI *MakeSignature) (unsigned int provContext, const void* pCertContext, const BYTE* szData, const SIZE_T cDataSize, BYTE** pszResultData, SIZE_T* pcResultSize);
+    typedef BOOL (WINAPI *LoadContext) (const void* pCertContext, void** provContext);
+    typedef BOOL (WINAPI *UnloadContext) (const void* provContext);
+    typedef BOOL (WINAPI *MakeSignature) (const void* provContext, const void* pCertContext, const BYTE* szData, const SIZE_T cDataSize, BYTE** pszResultData, SIZE_T* pcResultSize);
     typedef BOOL (WINAPI *GetProtocolVersion) (BYTE* szData, int* pcSize);
     typedef BOOL (WINAPI *GetConnectionType) (BYTE* szData, int* pcSize);
     typedef BOOL (WINAPI *FreeMemory) (BYTE* pData);
@@ -208,8 +221,8 @@ bool ADLocalLibrary::decode ( const char* encType,
 }
 
 bool ADLocalLibrary::loadCertificate ( const char* certData,
-                                  int certDataSz,
-                                  void** certCtx )
+                                       int certDataSz,
+                                       void** certCtx )
 {
     if ( ! m_adLib.isLoaded() )
         return false;
@@ -228,7 +241,7 @@ bool ADLocalLibrary::unloadCertificate ( const void* certCtx )
     return !!m_syms->unloadCertificate( certCtx );
 }
 
-bool ADLocalLibrary::loadContext ( const void* certCtx, unsigned int* provCtx )
+bool ADLocalLibrary::loadContext ( const void* certCtx, void** provCtx )
 {
     if ( ! m_adLib.isLoaded() )
         return false;
@@ -237,7 +250,7 @@ bool ADLocalLibrary::loadContext ( const void* certCtx, unsigned int* provCtx )
     return !!m_syms->loadContext( certCtx, provCtx );
 }
 
-bool ADLocalLibrary::unloadContext ( unsigned int provCtx )
+bool ADLocalLibrary::unloadContext ( const void* provCtx )
 {
     if ( ! m_adLib.isLoaded() )
         return false;
@@ -246,12 +259,12 @@ bool ADLocalLibrary::unloadContext ( unsigned int provCtx )
     return !!m_syms->unloadContext( provCtx );
 }
 
-bool ADLocalLibrary::makeSignature ( unsigned int provCtx,
-                                const void* certCtx,
-                                const char* data,
-                                unsigned int dataSz,
-                                char** resData,
-                                unsigned int* resSize )
+bool ADLocalLibrary::makeSignature ( const void* provCtx,
+                                     const void* certCtx,
+                                     const char* data,
+                                     unsigned int dataSz,
+                                     char** resData,
+                                     unsigned int* resSize )
 {
     if ( ! m_adLib.isLoaded() )
         return false;

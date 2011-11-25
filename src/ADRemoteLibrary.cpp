@@ -17,6 +17,7 @@
 
 #include "ADRemoteLibrary.h"
 #include "ADBootstrap.h"
+#include "ADCryptoAPI.h"
 
 /******************************************************************************/
 
@@ -364,42 +365,27 @@ bool ADRemoteLibrary::decode ( const char* pEncodingType, unsigned int cEncoding
 
 bool ADRemoteLibrary::loadCertificate ( const char* pCertData, int cCertDataSize, void** ppCertContext )
 {
-    (void)pCertData;
-    (void)cCertDataSize;
-    if ( ppCertContext )
-        *reinterpret_cast<char**>(ppCertContext) = (char*)0xDEADBEAF;
-    return true;
+    return ADCryptoAPI::loadCertificate(pCertData, cCertDataSize, ppCertContext);
 }
 
 bool ADRemoteLibrary::unloadCertificate ( const void* pCertContext )
 {
-    (void)pCertContext;
-    return true;
+    return ADCryptoAPI::unloadCertificate(pCertContext);
 }
 
-bool ADRemoteLibrary::loadContext ( const void* pCertContext, unsigned int* provContext )
+bool ADRemoteLibrary::loadContext ( const void* pCertContext, void** provContext )
 {
-    (void)pCertContext;
-    if ( provContext )
-        *provContext = 0xDEADBEAF;
-    return true;
+    return ADCryptoAPI::loadContext(pCertContext, provContext);
 }
 
-bool ADRemoteLibrary::unloadContext ( unsigned int provContext )
+bool ADRemoteLibrary::unloadContext ( const void* provContext )
 {
-    (void)provContext;
-    return true;
+    return ADCryptoAPI::unloadContext(provContext);
 }
 
-bool ADRemoteLibrary::makeSignature ( unsigned int provContext, const void* pCertContext, const char* szData, unsigned int cDataSize, char** pszResultData, unsigned int* pcResultSize )
+bool ADRemoteLibrary::makeSignature ( const void* provContext, const void* pCertContext, const char* szData, unsigned int cDataSize, char** pszResultData, unsigned int* pcResultSize )
 {
-    (void)provContext;
-    (void)pCertContext;
-    (void)szData;
-    (void)cDataSize;
-    (void)pszResultData;
-    (void)pcResultSize;
-    return false;
+    return ADCryptoAPI::makeSignature(provContext, pCertContext, szData, cDataSize, pszResultData, pcResultSize);
 }
 
 bool ADRemoteLibrary::getProtocolVersion ( char* szData, int* pcSize )

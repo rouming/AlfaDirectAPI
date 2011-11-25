@@ -35,17 +35,17 @@ public:
         return m_lib.unloadCertificate(pCertContext);
     }
 
-    virtual bool loadContext ( const void* pCertContext, unsigned int* provContext )
+    virtual bool loadContext ( const void* pCertContext, void** provContext )
     {
         return m_lib.loadContext(pCertContext, provContext);
     }
 
-    virtual bool unloadContext ( unsigned int provContext )
+    virtual bool unloadContext ( const void* provContext )
     {
         return m_lib.unloadContext(provContext);
     }
 
-    virtual bool makeSignature ( unsigned int provContext, const void* pCertContext, const char* szData, unsigned int cDataSize, char** pszResultData, unsigned int* pcResultSize )
+    virtual bool makeSignature ( const void* provContext, const void* pCertContext, const char* szData, unsigned int cDataSize, char** pszResultData, unsigned int* pcResultSize )
     {
         return m_lib.makeSignature(provContext, pCertContext, szData, cDataSize, pszResultData, pcResultSize);
     }

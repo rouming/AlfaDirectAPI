@@ -45,7 +45,7 @@ struct ADSessionInfo
     QByteArray encType;
 
     void* certCtx;
-    unsigned int provCtx;
+    void* provCtx;
 };
 
 class ADConnection : public QThread

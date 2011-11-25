@@ -21,6 +21,7 @@ HEADERS += \
            ADSmartPtr.h \
            ADAtomicOps.h \
            ADTemplateParser.h \
+           ADCryptoAPI.h \
 
 SOURCES += \
            ADConnection.cpp \
@@ -28,6 +29,7 @@ SOURCES += \
            ADOrder.cpp \
            ADBootstrap.cpp \
            ADTemplateParser.cpp \
+           ADCryptoAPI.cpp \
 
 win32:SOURCES += \
            ADLocalLibrary.cpp \
@@ -36,6 +38,39 @@ win32:SOURCES += \
 
 unix:SOURCES += \
            ADRemoteLibrary.cpp
+
+# Check that CryptoPRO exists on Linux
+linux-*:exists( /opt/cprocsp/include/cpcsp ) {
+
+  DEFINES += UNIX
+  DEFINES += LINUX
+  DEFINES += _CRYPTOAPI_
+
+  contains(QT_ARCH, x86_64): {
+      DEFINES += SIZEOF_VOID_P=8
+      CRYPTODIR = amd64
+  }
+  else {
+     DEFINES += SIZEOF_VOID_P=4
+     CRYPTODIR = ia32
+  }
+
+  INCLUDEPATH += \
+             /opt/cprocsp/include \
+             /opt/cprocsp/include/cpcspr \
+             /opt/cprocsp/include/cpcsp
+
+  QMAKE_LIBDIR += \
+            /opt/cprocsp/lib/$$CRYPTODIR
+
+  QMAKE_RPATHDIR += \
+           /opt/cprocsp/lib/$$CRYPTODIR
+
+
+  LIBS += -lssp -lcapi20 -lcapi10 -lcpext -lrdrsup -lasn1data
+}
+
+win32:LIBS += -lAdvapi32  -lCrypt32
 
 RESOURCES += $$LEVEL/AlfaDirectAPI.qrc
 

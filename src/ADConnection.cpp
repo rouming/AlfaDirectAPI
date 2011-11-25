@@ -30,26 +30,6 @@
 // Log everything to file!
 #define DO_ALL_LOGGING 1
 
-/****************************************************************************/
-//
-// Your can use CryptoPRO calls directly instead of
-//    ADAPI::LoadCertificate, ADAPI::LoadContext, ADAPI::MakeSignature
-//
-// #include "CryptoPRO.h"
-//
-// Usage:
-//
-//      QByteArray sign;
-//      do_low_sign( newOrderDoc, QByteArray::fromHex(m_sessInfo.certData),
-//                       sign, OID_HashVerbaO, 1, 0, 0);
-// or:
-//      do_sign( newOrderDoc, QByteArray::fromHex(m_sessInfo.certData),
-//                        sign, 0, OID_HashVerbaO);
-// do not forget:
-//      sign = QString(QString("0x") + QString(sign.toHex().toUpper())).toLatin1();
-//
-/****************************************************************************/
-
 namespace
 {
     static const QString AD_DB_PREFIX("AD_");

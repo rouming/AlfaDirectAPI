@@ -277,12 +277,13 @@ static ADConnection::Error ADSendHttpsRequest (
                      &certVerifier,
                      SLOT(onAuthRequired(QNetworkReply*,QAuthenticator*)));
 
-    QNetworkRequest request( url );
+    QNetworkRequest request = QNetworkRequest(url);
 
     // Set user agent like real AD client does
     request.setRawHeader("User-Agent", "ADLite56953");
 
     QNetworkReply* reply = net.get( request );
+
     QSslConfiguration conf = reply->sslConfiguration();
 
     QList<QSslCertificate> certs = QSslCertificate::fromPath(":cacert.pem", QSsl::Pem);
@@ -1156,16 +1157,16 @@ void ADConnection::_sqlFindFutures ( const QString& futCode,
         ADOptionPair& optPair = optPairMap[priceType];
         if ( opt.type == ADOption::Call ) {
             if ( optPair.optionCall.type != ADOption::Invalid )
-                printf("Warning: option exists (was '%s', new '%s')\n",
-                       qPrintable(optPair.optionCall.paperCode),
-                       qPrintable(opt.paperCode));
+                qWarning("Warning: option exists (was '%s', new '%s')",
+                         qPrintable(optPair.optionCall.paperCode),
+                         qPrintable(opt.paperCode));
             optPair.optionCall = opt;
         }
         else {
             if ( optPair.optionPut.type != ADOption::Invalid )
-                printf("Warning: option exists (was '%s', new '%s')\n",
-                       qPrintable(optPair.optionPut.paperCode),
-                       qPrintable(opt.paperCode));
+                qWarning("Warning: option exists (was '%s', new '%s')",
+                         qPrintable(optPair.optionPut.paperCode),
+                         qPrintable(opt.paperCode));
             optPair.optionPut = opt;
         }
         optPair.priceType = priceType;
@@ -1194,11 +1195,12 @@ void ADConnection::_sqlFindFutures ( const QString& futCode,
 
                     if ( optPair.optionCall.type == ADOption::Invalid ||
                          optPair.optionPut.type == ADOption::Invalid ) {
-                        printf("Not full pair: call=('%s', type='%s', invalid=%d), put=('%s', type='%s', invalid=%d)\n",
-                               qPrintable(optPair.optionCall.paperCode), "call",
-                               optPair.optionCall.type == ADOption::Invalid,
-                               qPrintable(optPair.optionPut.paperCode), "put",
-                               optPair.optionPut.type == ADOption::Invalid);
+                        qWarning("Not full pair: call=('%s', type='%s', "
+                                 "invalid=%d), put=('%s', type='%s', invalid=%d)",
+                                 qPrintable(optPair.optionCall.paperCode), "call",
+                                 optPair.optionCall.type == ADOption::Invalid,
+                                 qPrintable(optPair.optionPut.paperCode), "put",
+                                 optPair.optionPut.type == ADOption::Invalid);
                         optIt = optPrMapIt->erase( optIt );
                     }
                     else
@@ -2928,12 +2930,6 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                     continue;
                 }
 
-                //XXX
-                {
-                    //if ( sellQty == buyQty && sellQty != 0 )
-                    //  DebugBreak();
-                }
-
                 // Lock
                 QWriteLocker wLocker( &m_rwLock );
                 Quote& quote = m_quotes[paperNo];
@@ -3060,10 +3056,6 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                 qWarning("Wrong block '%s': can't parse request id!", qPrintable(it->blockName));
                 continue;
             }
-
-            //XXX
-            //XXX printf("RESPONSE: %s %s\n", qPrintable(it->blockName), qPrintable(it->blockData));
-            //XXX fflush(stdout);
 
             // Lock
             QWriteLocker wLocker( &m_rwLock );
@@ -3790,6 +3782,7 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
             qWarning("Table '%s' does not exist in DB!", qPrintable(tableName));
             return;
         }
+
         QStringList& tableFields = m_dbSchema[tableName];
 
         foreach ( QString line, lines ) {
@@ -4046,12 +4039,7 @@ void ADConnection::sendAuthRequest ()
                   "|ADPRC|0|" + m_login + "|" + QString("%1").arg(m_sessInfo.id) +
                   "\r\n\r\n");
     // Write to server in latin1
-    res = writeToSock( auth.toLatin1() );
-    if ( ! res ) {
-        qWarning("send failed!");
-        QThread::quit();
-        return;
-    }
+    writeToSock( auth.toLatin1() );
 }
 
 bool ADConnection::parseAuthResponse ( const ADConnection::DataBlock& block )

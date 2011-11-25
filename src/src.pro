@@ -66,7 +66,6 @@ linux-*:exists( /opt/cprocsp/include/cpcsp ) {
   QMAKE_RPATHDIR += \
            /opt/cprocsp/lib/$$CRYPTODIR
 
-
   LIBS += -lssp -lcapi20 -lcapi10 -lcpext -lrdrsup -lasn1data
 }
 

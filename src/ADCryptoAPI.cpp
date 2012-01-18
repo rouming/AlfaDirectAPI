@@ -1,3 +1,95 @@
+/*******************************************************************************
+#
+# How to use CryptoPRO and AlfaDirect on Linux
+#
+
+# I'am using Arch linux and before installing crypto pro linux rpms you should do
+# some preparations. Basic faq for linux you can find here: http://cryptopro.ru/faq
+
+#0. FYI base cprocsp folders
+/etc/cron.daily/cprocsp
+/etc/opt/cprocsp
+/etc/init.d/cprocsp
+/opt/cprocsp
+/var/opt/cprocsp
+
+#1. install fake Linux Standard Base runtime
+yaourt -S ld-lsb
+
+#2. install rpm-org (others didn't work for me)
+yaourt -S rpm-org
+
+#3. create lsb ELF interpreter if your arch is x86-64
+sudo ln -s /lib64/ld-linux-x86-64.so.2 /lib64/ld-lsb-x86-64.so.3
+
+# Then install crypto pro rpms
+#
+
+#1. firstly install base
+sudo rpm -i --nodeps lsb-cprocsp-base-3.6.1-4.noarch.rpm
+
+#2. install others rpms
+sudo rpm -i  --force --nodeps *.rpm
+
+#3. start server. all errors are in /var/errors.log
+sudo /opt/cprocsp/sbin/<arch>/cryptsrv
+
+
+#
+# Install keys and certificates
+#
+
+#
+# Some important steps on Windows
+#
+
+#1. do copy of private key container and name it as 'alfadirect':
+      Win Settings/КриптоПро CSP/Сервис/Скопировать...
+
+#2. export certificate based on private key container in base64 and
+    name it e.g. 'cert.cer'. do not include private key into this certificate:
+      Win Settings/КриптоПро CSP/Сервис/Просмотреть сертификаты в контейнере...
+    choose 'alfadirect' key container
+    choose Свойства/Состав/Копировать в файл
+      - do not export private key
+      - choose base64
+
+#3. copy new private key container (folder) 'alfadirect' and cert.cer on linux host
+
+#
+# Steps on Linux
+#
+
+#0. start server (or make sure it is already running)
+sudo /opt/cprocsp/sbin/<arch>/cryptsrv
+
+#1. copy private key folder to
+/var/opt/cprocsp/keys/<username>/alfadirect
+where <username> - your system username
+
+#2. get list of keys containers and check, that newly copied container is there
+/opt/cprocsp/bin/<arch>/csptestf -keyset -enum_cont -verifycontext -fqcn
+
+#3. check key container, no errors should be
+/opt/cprocsp/bin/<arch>/csptest -keyset -check -cont '\\.\HDIMAGE\alfadirect'
+
+#4. install certificate
+
+# with pin
+/opt/cprocsp/bin/<arch>/certmgr -inst -at_signature -store uMy -pin 1q2w3e -file cert.cer -cont '\\.\HDIMAGE\alfadirect'
+
+# or without pin
+/opt/cprocsp/bin/<arch>/certmgr -inst -at_signature -store uMy -file cert.cer -cont '\\.\HDIMAGE\alfadirect'
+
+#5. get list of containers, check, that newly installed container is in list
+#   and this container linked with private key, i.e. this line exists:
+#  PrivateKey Link: Yes. Container: HDIMAGE\\alfadirect\2E20
+/opt/cprocsp/bin/<arch>/certmgr -list
+
+# man is working too
+man certmgr
+*******************************************************************************/
+
 #ifdef _WIN_
   #include <windows.h>
 #elif defined(_CRYPTOAPI_)

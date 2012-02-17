@@ -133,8 +133,8 @@ quint32 ADOrderPrivate::updateTradesQty ( quint32 tradesQty )
     //Lock
     QMutexLocker locker( &m_mutex );
     quint32 trades = 0;
-    if ( m_tradesQty < tradesQty && m_qty >= tradesQty ) {
-        m_tradesQty = tradesQty;
+    if ( m_qty >= (m_tradesQty + tradesQty) ) {
+        m_tradesQty += tradesQty;
         quint32 restTrades = m_qty - m_restQty;
         if ( restTrades < m_tradesQty ) {
             trades = m_tradesQty - restTrades;

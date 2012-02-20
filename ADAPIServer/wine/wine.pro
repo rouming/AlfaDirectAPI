@@ -18,17 +18,16 @@ WINE_BUILD = 1
 !include($$LEVEL/AlfaDirectAPI.pri):error("Can't load AlfaDirectAPI.pri")
 
 INCLUDEPATH += \
-               $$PWD/../lib \
                $$LEVEL/src \
                $$LEVEL/ADAPI/include \
 
 SOURCES = \
           Main.cpp \
+          ADAPIServer.cpp \
+          $$LEVEL/src/ADRPC.cpp \
           $$LEVEL/src/ADLocalLibrary.cpp \
           $$LEVEL/src/ADDynaLoader.cpp
 
 QMAKE_RPATHDIR += $$DESTDIR
-
-LIBS +=  -lADAPIServer -lxmlrpc++ -lxmlrpc_server++ -lxmlrpc_server_pstream++ -lxmlrpc
 
 DEFINED -= _LIN_=1

@@ -4,8 +4,7 @@ LEVEL = ../
 
 !include($$LEVEL/AlfaDirectAPI.pri):error("Can't load AlfaDirectAPI.pri")
 
-unix:SUBDIRS += lib \
-                wine
+unix:SUBDIRS += wine
 
 # build must be last:
 CONFIG += ordered

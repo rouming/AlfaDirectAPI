@@ -1,15 +1,9 @@
-#ifndef _WIN_
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
-#endif
-
+#include <signal.h>
 #include <assert.h>
 #include <stdlib.h>
-#include <xmlrpc-c/girerr.hpp>
-#include <xmlrpc-c/base.hpp>
-#include <xmlrpc-c/client.hpp>
-#include <xmlrpc-c/client_transport.hpp>
 
 #include <QCoreApplication>
 #include <QProcess>
@@ -18,10 +12,13 @@
 #include "ADRemoteLibrary.h"
 #include "ADBootstrap.h"
 #include "ADCryptoAPI.h"
+#include "ADRPC.h"
+
+#ifndef _LIN_
+#error Unsupported platform
+#endif
 
 /******************************************************************************/
-
-#ifndef _WIN_ // Unix
 
 class WineProcess : public QProcess
 {
@@ -45,26 +42,20 @@ private:
     int m_fd;
 };
 
-#endif
-
 /******************************************************************************/
 
 struct RemoteData
 {
     RemoteData () :
-        transport(0),
-        client(0),
         wineProcess(0)
     {
         socks[0] = socks[1] = -1;
     }
 
-    xmlrpc_c::clientXmlTransport_pstream* transport;
-    xmlrpc_c::client_xml* client;
-
-#ifndef _WIN_
     void closeSocks ()
     {
+        rpc.set_fd(-1);
+
         if ( socks[0] != -1 ) {
             ::close(socks[0]);
             socks[0] = -1;
@@ -75,9 +66,9 @@ struct RemoteData
         }
     }
 
+    ADRPC rpc;
     int socks[2];
     WineProcess* wineProcess;
-#endif
 };
 
 /******************************************************************************/
@@ -97,8 +88,6 @@ bool ADRemoteLibrary::load ()
     unload();
 
     int fd = -1;
-
-#ifndef _WIN_ //Unix
     int res = -1;
     int flags = 0;
     QString serverBinPath;
@@ -110,6 +99,12 @@ bool ADRemoteLibrary::load ()
     else
         goto error;
 
+    // It's a good idea to disable SIGPIPE signals; if client closes his end
+    // of the pipe/socket, we'd rather see a failure to send a response than
+    // get killed by the OS.
+    signal(SIGPIPE, SIG_IGN);
+
+    // Create socket
     res = ::socketpair( AF_UNIX, SOCK_STREAM, 0, m_data->socks );
     if ( res < 0 ) {
         goto error;
@@ -136,23 +131,10 @@ bool ADRemoteLibrary::load ()
     // Close fd on this side
     ::close( m_data->socks[1] );
 
-#else
-#error Unsupported platform
-#endif
+    // Set fd
+    m_data->rpc.set_fd(fd);
 
-    try {
-        // Set XML size to max
-        xmlrpc_limit_set(XMLRPC_XML_SIZE_LIMIT_ID, UINT_MAX);
-
-        m_data->transport = new xmlrpc_c::clientXmlTransport_pstream(
-            xmlrpc_c::clientXmlTransport_pstream::constrOpt().fd(fd));
-
-        m_data->client = new xmlrpc_c::client_xml(m_data->transport);
-
-        return true;
-    } catch (std::exception const& e) {
-        qWarning("Something threw an error: %s", e.what());
-    }
+    return true;
 
  error:
     unload();
@@ -161,13 +143,6 @@ bool ADRemoteLibrary::load ()
 
 void ADRemoteLibrary::unload ()
 {
-    delete m_data->client;
-    delete m_data->transport;
-
-    m_data->client = 0;
-    m_data->transport = 0;
-
-#ifndef _WIN_
     m_data->closeSocks();
 
     if ( m_data->wineProcess ) {
@@ -176,194 +151,159 @@ void ADRemoteLibrary::unload ()
         delete m_data->wineProcess;
         m_data->wineProcess = 0;
     }
-#endif
 }
 
 bool ADRemoteLibrary::isLoaded () const
 {
-    return m_data->client != 0;
+    return m_data->wineProcess != 0;
 }
 
-bool ADRemoteLibrary::encode ( const char* pEncodingType, unsigned int cEncodingTypeSize, const char* pKey, const char* pData, unsigned int cDataSize, char** pResultData, unsigned int* pcResultSize )
+bool ADRemoteLibrary::encode ( const char* pEncodingType,
+                               unsigned int cEncodingTypeSize,
+                               const char* pKey, const char* pData,
+                               unsigned int cDataSize, char** pResultData,
+                               unsigned int* pcResultSize )
 {
-    if ( ! isLoaded() )
+    if (!isLoaded())
         return false;
 
-    if ( pResultData == 0 || pcResultSize == 0 )
+    if (pResultData == 0 || pcResultSize == 0)
         return false;
 
-    try {
-        const std::string methodName("adapi.encode");
+    std::vector<unsigned char> encType;
+    if (pEncodingType && cEncodingTypeSize)
+        encType = std::vector<unsigned char>(pEncodingType,
+                                             pEncodingType + cEncodingTypeSize);
 
-        std::vector<unsigned char> encType;
-        if ( pEncodingType && cEncodingTypeSize )
-            encType = std::vector<unsigned char>(pEncodingType, pEncodingType + cEncodingTypeSize);
+    std::vector<unsigned char> data;
+    if (pData && cDataSize)
+        data = std::vector<unsigned char>(pData, pData + cDataSize);
 
-        std::vector<unsigned char> data;
-        if ( pData && cDataSize )
-            data = std::vector<unsigned char>(pData, pData + cDataSize);
+    std::vector<unsigned char> key;
+    if (pKey)
+        key = std::vector<unsigned char>(pKey, pKey + 16);
 
-        std::vector<unsigned char> key;
-        if ( pKey )
-            key = std::vector<unsigned char>(pKey, pKey + 16);
+    uint32_t resOut = 0;
+    std::vector<ADRPC::value*> params;
+    params.push_back(ADRPC::value::create_value(encType));
+    params.push_back(ADRPC::value::create_value(key));
+    params.push_back(ADRPC::value::create_value(data));
 
-        xmlrpc_c::paramList parms;
-        parms.add(xmlrpc_c::value_bytestring(encType));
-        parms.add(xmlrpc_c::value_bytestring(key));
-        parms.add(xmlrpc_c::value_bytestring(data));
+    std::vector<ADRPC::value*> retvals;
+    if (!m_data->rpc.call("adapi.encode", params, retvals)) {
+        qWarning("Call 'adapi.encode' failed");
+        goto exit;
+    }
 
-        xmlrpc_c::rpcPtr rpc(methodName, parms);
-        xmlrpc_c::carriageParm_pstream carriageParm;
+    if (retvals.size() != 2) {
+        qWarning("Wrong retval size for 'adapi.encode' call");
+        goto exit;
+    }
 
-        rpc->call(m_data->client, &carriageParm);
-        assert(rpc->isFinished());
+    if (!retvals[0]->to_uint32(resOut)) {
+        qWarning("Can't parse result for 'adapi.encode' call");
+        goto exit;
+    }
 
-        std::map<std::string, xmlrpc_c::value> res = xmlrpc_c::value_struct( rpc->getResult() );
+    if (!retvals[1]->to_bytearray(data)) {
+        qWarning("Can't parse data for 'adapi.encode' call");
+        goto exit;
+    }
 
-        std::map<std::string, xmlrpc_c::value>::iterator it;
-
-        bool resOut = false;
-
-        if ( (it = res.find("result")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BOOLEAN )
-            resOut = xmlrpc_c::value_boolean(it->second);
-        else
+    if (data.size() > 0) {
+        *pcResultSize = data.size();
+        *pResultData = reinterpret_cast<char*>(::malloc(*pcResultSize));
+        if (*pResultData == 0)
             return false;
-
-        if ( (it = res.find("data")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BYTESTRING )
-            data = xmlrpc_c::value_bytestring(it->second).vectorUcharValue();
-        else
-            return false;
-
-        if ( data.size() > 0 ) {
-            *pcResultSize = data.size();
-            *pResultData = reinterpret_cast<char*>(::malloc(*pcResultSize));
-            if ( *pResultData == 0 )
-                return false;
-            std::copy( data.begin(), data.end(), *pResultData );
-        }
-
-        return resOut;
+        std::copy(data.begin(), data.end(), *pResultData);
     }
-    catch ( std::exception& e ) {
-        qWarning("Encode exception: %s", e.what());
-        return false;
-    }
-    catch ( ... ) {
-        qWarning("Encode generic exception!");
-        return false;
-    }
+
+exit:
+    ADRPC::free(params);
+    ADRPC::free(retvals);
+    return !!resOut;
 }
 
-bool ADRemoteLibrary::decode ( const char* pEncodingType, unsigned int cEncodingTypeSize, const char* pKey, const char* pData, unsigned int cDataSize, char** pResultData, unsigned int* pcResultSize, unsigned int* pcParsedSize )
+bool ADRemoteLibrary::decode ( const char* pEncodingType,
+                               unsigned int cEncodingTypeSize,
+                               const char* pKey, const char* pData,
+                               unsigned int cDataSize, char** pResultData,
+                               unsigned int* pcResultSize,
+                               unsigned int* pcParsedSize )
 {
-    if ( ! isLoaded() )
+    if (!isLoaded())
         return false;
 
-    if ( pResultData == 0 || pcResultSize == 0 || pcParsedSize == 0 )
+    if (pResultData == 0 || pcResultSize == 0 || pcParsedSize == 0)
         return false;
 
-    if ( pData == 0 || cDataSize == 0 )
+    if (pData == 0 || cDataSize == 0)
         return false;
 
-    try {
-        const std::string methodName("adapi.decode");
+    std::vector<unsigned char> encType;
+    if (pEncodingType && cEncodingTypeSize)
+        encType = std::vector<unsigned char>(pEncodingType,
+                                             pEncodingType + cEncodingTypeSize);
 
-        std::vector<unsigned char> encType;
-        if ( pEncodingType && cEncodingTypeSize )
-            encType = std::vector<unsigned char>(pEncodingType, pEncodingType + cEncodingTypeSize);
+    std::vector<unsigned char> data;
+    if ( pData && cDataSize )
+        data = std::vector<unsigned char>(pData, pData + cDataSize);
 
-        std::vector<unsigned char> key;
-        if ( pKey )
-            key = std::vector<unsigned char>(pKey, pKey + 16);
+    std::vector<unsigned char> key;
+    if ( pKey )
+        key = std::vector<unsigned char>(pKey, pKey + 16);
 
-        unsigned int parsedSize = 0;
-        std::vector<unsigned char> data = std::vector<unsigned char>(pData, pData + cDataSize);
+    uint32_t resOut = 0;
+    uint32_t parsedSize = 0;
+    std::vector<ADRPC::value*> params;
+    params.push_back(ADRPC::value::create_value(encType));
+    params.push_back(ADRPC::value::create_value(key));
+    params.push_back(ADRPC::value::create_value(data));
 
-        xmlrpc_c::paramList parms;
-        parms.add(xmlrpc_c::value_bytestring(encType));
-        parms.add(xmlrpc_c::value_bytestring(key));
-        parms.add(xmlrpc_c::value_bytestring(data));
-
-        xmlrpc_c::rpcPtr rpc(methodName, parms);
-        xmlrpc_c::carriageParm_pstream carriageParm;
-
-        rpc->call(m_data->client, &carriageParm);
-        assert(rpc->isFinished());
-
-        std::map<std::string, xmlrpc_c::value> res = xmlrpc_c::value_struct( rpc->getResult() );
-        std::map<std::string, xmlrpc_c::value>::iterator it;
-
-        bool resOut = false;
-
-        if ( (it = res.find("result")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BOOLEAN )
-            resOut = xmlrpc_c::value_boolean(it->second);
-        else
-            return false;
-
-        if ( ! resOut )
-            return false;
-
-        if ( (it = res.find("data")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BYTESTRING )
-            data = xmlrpc_c::value_bytestring(it->second).vectorUcharValue();
-        else
-            return false;
-
-        if ( (it = res.find("parsed_size")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_INT )
-            parsedSize = xmlrpc_c::value_int(it->second);
-        else
-            return false;
-
-        //XXX
-        if ( data.size() >= XMLRPC_XML_SIZE_LIMIT_DEFAULT )
-            printf("!!!!!!!!!!!! >>>>>>>>  enc=%d, dec=%u, parsed=%d\n",
-                   cDataSize, (unsigned int)data.size(), parsedSize);
-
-        //XXX
-        if ( 0 )
-        {
-            printf("parsed=%d, key=", parsedSize);
-            for ( unsigned int i = 0; i < 16; ++i ) {
-                printf("%02x", pKey[i] & 0xff);
-            }
-            printf(", encrypted=");
-            for ( unsigned int i = 0; i < parsedSize; ++i ) {
-                printf("%02x", pData[i] & 0xff);
-            }
-            printf(", decrypted=");
-            for ( unsigned int i = 0; i < data.size(); ++i ) {
-                printf("%c", data[i] & 0xff);
-            }
-            printf("\n");
-
-        }
-
-        if ( data.size() > 0 ) {
-            *pcResultSize = data.size();
-            *pResultData = reinterpret_cast<char*>(::malloc(*pcResultSize));
-            if ( *pResultData == 0 )
-                return false;
-            std::copy( data.begin(), data.end(), *pResultData );
-        }
-        *pcParsedSize = parsedSize;
-
-        return true;
+    std::vector<ADRPC::value*> retvals;
+    if (!m_data->rpc.call("adapi.decode", params, retvals)) {
+        qWarning("Call 'adapi.decode' failed");
+        goto exit;
     }
-    catch ( std::exception& e ) {
-        qWarning("Decode exception: %s", e.what());
-        return false;
+
+    if (retvals.size() != 3) {
+        qWarning("Wrong retval size for 'adapi.decode' call");
+        goto exit;
     }
-    catch ( ... ) {
-        qWarning("Decode generic exception!");
-        return false;
+
+    if (!retvals[0]->to_uint32(resOut)) {
+        qWarning("Can't parse result for 'adapi.decode' call");
+        goto exit;
     }
+
+    if (!retvals[1]->to_bytearray(data)) {
+        qWarning("Can't parse data for 'adapi.decode' call");
+        goto exit;
+    }
+
+    if (!retvals[2]->to_uint32(parsedSize)) {
+        qWarning("Can't parse data for 'adapi.decode' call");
+        goto exit;
+    }
+
+    if (data.size() > 0) {
+        *pcResultSize = data.size();
+        *pResultData = reinterpret_cast<char*>(::malloc(*pcResultSize));
+        if (*pResultData == 0)
+            return false;
+        std::copy(data.begin(), data.end(), *pResultData);
+    }
+    *pcParsedSize = parsedSize;
+
+exit:
+    ADRPC::free(params);
+    ADRPC::free(retvals);
+    return !!resOut;
 }
 
-bool ADRemoteLibrary::loadCertificate ( const char* pCertData, int cCertDataSize, void** ppCertContext )
+bool ADRemoteLibrary::loadCertificate ( const char* pCertData,
+                                        int cCertDataSize,
+                                        void** ppCertContext )
 {
     return ADCryptoAPI::loadCertificate(pCertData, cCertDataSize, ppCertContext);
 }
@@ -383,119 +323,103 @@ bool ADRemoteLibrary::unloadContext ( const void* provContext )
     return ADCryptoAPI::unloadContext(provContext);
 }
 
-bool ADRemoteLibrary::makeSignature ( const void* provContext, const void* pCertContext, const char* szData, unsigned int cDataSize, char** pszResultData, unsigned int* pcResultSize )
+bool ADRemoteLibrary::makeSignature ( const void* provContext,
+                                      const void* pCertContext,
+                                      const char* szData,
+                                      unsigned int cDataSize,
+                                      char** pszResultData,
+                                      unsigned int* pcResultSize )
 {
-    return ADCryptoAPI::makeSignature(provContext, pCertContext, szData, cDataSize, pszResultData, pcResultSize);
+    return ADCryptoAPI::makeSignature(provContext, pCertContext, szData,
+                                      cDataSize, pszResultData, pcResultSize);
 }
 
 bool ADRemoteLibrary::getProtocolVersion ( char* szData, int* pcSize )
 {
-    if ( ! isLoaded() )
+    if (!isLoaded())
         return false;
 
-    if ( szData == 0 || pcSize == 0 )
+    if (szData == 0 || pcSize == 0)
         return false;
 
-    try {
-        const std::string methodName("adapi.getProtocolVersion");
-
-        xmlrpc_c::paramList parms;
-        xmlrpc_c::rpcPtr rpc(methodName, parms);
-        xmlrpc_c::carriageParm_pstream carriageParm;
-
-        rpc->call(m_data->client, &carriageParm);
-        assert(rpc->isFinished());
-
-        std::map<std::string, xmlrpc_c::value> res = xmlrpc_c::value_struct( rpc->getResult() );
-
-        std::map<std::string, xmlrpc_c::value>::iterator it;
-
-        bool resOut = false;
-        std::vector<unsigned char> data;
-
-        if ( (it = res.find("result")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BOOLEAN )
-            resOut = xmlrpc_c::value_boolean(it->second);
-        else
-            return false;
-
-        if ( (it = res.find("data")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BYTESTRING )
-            data = xmlrpc_c::value_bytestring(it->second).vectorUcharValue();
-        else
-            return false;
-
-        if ( data.size() > 0 ) {
-            *pcSize = data.size();
-            int sz = ((unsigned int)*pcSize > data.size() ? data.size() : *pcSize);
-            std::copy( data.begin(), data.begin() + sz, szData );
-        }
-
-        return resOut;
+    uint32_t resOut = 0;
+    std::vector<unsigned char> data;
+    std::vector<ADRPC::value*> params;
+    std::vector<ADRPC::value*> retvals;
+    if (!m_data->rpc.call("adapi.getProtocolVersion", params, retvals)) {
+        qWarning("Call 'adapi.getProtocolVersion' failed");
+        goto exit;
     }
-    catch ( std::exception& e ) {
-        qWarning("getProtocolVersion exception: %s", e.what());
-        return false;
+
+    if (retvals.size() != 2) {
+        qWarning("Wrong retval size for 'adapi.getProtocolVersion' call");
+        goto exit;
     }
-    catch ( ... ) {
-        qWarning("getProtocolVersion generic exception!");
-        return false;
+
+    if (!retvals[0]->to_uint32(resOut)) {
+        qWarning("Can't parse result for 'adapi.getProtocolVersion' call");
+        goto exit;
     }
+
+    if (!retvals[1]->to_bytearray(data)) {
+        qWarning("Can't parse data for 'adapi.getProtocolVersion' call");
+        goto exit;
+    }
+
+    if (data.size() > 0) {
+        *pcSize = data.size();
+        int sz = ((unsigned int)*pcSize > data.size() ? data.size() : *pcSize);
+        std::copy(data.begin(), data.begin() + sz, szData);
+    }
+
+exit:
+    ADRPC::free(params);
+    ADRPC::free(retvals);
+    return !!resOut;
 }
 
 bool ADRemoteLibrary::getConnectionType ( char* szData, int* pcSize )
 {
-    if ( ! isLoaded() )
+    if (!isLoaded())
         return false;
 
-    if ( szData == 0 || pcSize == 0 )
+    if (szData == 0 || pcSize == 0)
         return false;
 
-    try {
-        const std::string methodName("adapi.getConnectionType");
-
-        xmlrpc_c::paramList parms;
-        xmlrpc_c::rpcPtr rpc(methodName, parms);
-        xmlrpc_c::carriageParm_pstream carriageParm;
-
-        rpc->call(m_data->client, &carriageParm);
-        assert(rpc->isFinished());
-
-        std::map<std::string, xmlrpc_c::value> res = xmlrpc_c::value_struct( rpc->getResult() );
-
-        std::map<std::string, xmlrpc_c::value>::iterator it;
-
-        bool resOut = false;
-        std::vector<unsigned char> data;
-
-        if ( (it = res.find("result")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BOOLEAN )
-            resOut = xmlrpc_c::value_boolean(it->second);
-        else
-            return false;
-
-        if ( (it = res.find("data")) != res.end() &&
-             it->second.type() == xmlrpc_c::value::TYPE_BYTESTRING )
-            data = xmlrpc_c::value_bytestring(it->second).vectorUcharValue();
-        else
-            return false;
-
-        if ( data.size() > 0 ) {
-            *pcSize = data.size();
-            int sz = ((unsigned int)*pcSize > data.size() ? data.size() : *pcSize);
-            std::copy( data.begin(), data.begin() + sz, szData );
-        }
-
-        return resOut;
+    uint32_t resOut = 0;
+    std::vector<unsigned char> data;
+    std::vector<ADRPC::value*> params;
+    std::vector<ADRPC::value*> retvals;
+    if (!m_data->rpc.call("adapi.getConnectionType", params, retvals)) {
+        qWarning("Call 'adapi.getConnectionType' failed");
+        goto exit;
     }
-    catch ( std::exception& e ) {
-        qWarning("getConnectionType exception: %s", e.what());
-        return false;
+
+    if (retvals.size() != 2) {
+        qWarning("Wrong retval size for 'adapi.getConnectionType' call");
+        goto exit;
     }
-    catch ( ... ) {
-        qWarning("getConnectionType generic exception!");
-        return false;
+
+    if (!retvals[0]->to_uint32(resOut)) {
+        qWarning("Can't parse result for 'adapi.getConnectionType' call");
+        goto exit;
     }
+
+    if (!retvals[1]->to_bytearray(data)) {
+        qWarning("Can't parse data for 'adapi.getConnectionType' call");
+        goto exit;
+    }
+
+    if (data.size() > 0) {
+        *pcSize = data.size();
+        int sz = ((unsigned int)*pcSize > data.size() ? data.size() : *pcSize);
+        std::copy(data.begin(), data.begin() + sz, szData);
+    }
+
+exit:
+    ADRPC::free(params);
+    ADRPC::free(retvals);
+    return !!resOut;
 }
 
 bool ADRemoteLibrary::freeMemory ( char* pData )

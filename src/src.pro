@@ -37,7 +37,8 @@ win32:SOURCES += \
            ADBootstrap.h
 
 unix:SOURCES += \
-           ADRemoteLibrary.cpp
+           ADRemoteLibrary.cpp \
+           ADRPC.cpp \
 
 # Check that CryptoPRO exists on Linux
 linux-*:exists( /opt/cprocsp/include/cpcsp ) {

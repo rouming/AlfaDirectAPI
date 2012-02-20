@@ -2,6 +2,7 @@
 #define ADAPISERVERBASE_H
 
 #include "ADAPIInterface.h"
+#include "ADRPC.h"
 
 class ADAPIServerBase : public ADAPIInterface
 {
@@ -12,7 +13,7 @@ public:
     int startServer ();
 
 private:
-    int m_fd;
+    ADRPC m_rpc;
 };
 
 #endif // ADAPISERVERBASE_H

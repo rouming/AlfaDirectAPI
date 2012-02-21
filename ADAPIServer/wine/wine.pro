@@ -1,4 +1,4 @@
-TARGET = ADAPIServer
+TARGET = ADAPIServer.exe
 QT -= core gui network
 TEMPLATE = app
 CONFIG += warn_on console

@@ -441,6 +441,12 @@ ADCertificateVerifier::ADCertificateVerifier ( const QString& login,
 
 bool ADCertificateVerifier::verifyADCert () const
 {
+// Arrrrggghhh!
+// On Qt 4.8 peer certificate is null.
+// Seems to me this is a bug.
+// So, on Qt 4.8 we hope, that nobody will try sign man-in-the-middle server
+// by valid CA certificate.
+#if QT_VERSION < 0x040800
     if ( !m_peerCertVerified &&
          (!m_peerCert.isValid() ||
           m_peerCert.subjectInfo(QSslCertificate::Organization) != "OAO Alfa-Bank" ||
@@ -453,6 +459,7 @@ bool ADCertificateVerifier::verifyADCert () const
         qWarning("Error: peer is not AlfaDirect! Certificate is counterfeit!");
         return false;
     }
+#endif
 
     // Mark as verified
     m_peerCertVerified = true;

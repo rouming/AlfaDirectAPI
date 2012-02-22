@@ -138,6 +138,7 @@ bool ADCryptoAPI::loadCertificate ( const char* certData,
 #else
     (void)certData;
     (void)certDataSize;
+    (void)certContext;
     return false;
 #endif
 }

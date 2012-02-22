@@ -2478,19 +2478,19 @@ bool ADConnection::updateSessionInfo ( const QString& infoStr )
     // Load certificate
     res = m_adLib->loadCertificate( info.certData.data(), info.certData.size(),
                                     &info.certCtx );
-    if ( ! res || info.certCtx == 0 ) {
-        qWarning("can't load certificate!");
-        m_lastError = CertificateError;
-        return false;
+    if ( res && info.certCtx ) {
+        // Load context
+        res = m_adLib->loadContext( info.certCtx, &info.provCtx );
+        if ( ! res || info.provCtx == 0 ) {
+            qWarning("can't load context for order signing!");
+            m_adLib->unloadCertificate( info.certCtx );
+            m_lastError = ContextError;
+            return false;
+        }
     }
-    // Load context
-    res = m_adLib->loadContext( info.certCtx, &info.provCtx );
-    if ( ! res || info.provCtx == 0 ) {
-        qWarning("can't load context!");
-        m_adLib->unloadCertificate( info.certCtx );
-        m_lastError = ContextError;
-        return false;
-    }
+    else
+        qWarning("can't load certificate for order signing!\n"
+                 "will continue working without trading!");
 
     // Set session info
     m_sessInfo = info;

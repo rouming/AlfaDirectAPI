@@ -9,13 +9,13 @@ NAME
     This library is written in C++/Qt4 and uses ADAPI.dll (win32 black box dynamic
     library which kindly shared by AlfaDirect guys) to encode and decode network
     stream from broker server. On Unix ADAPI.dll is loaded by Wine, so all basic
-    market data receiving functions work well, but trading won't work, because
-    AlfaDirect uses CryptoPRO as crypto provider for order signing, and for now i
-    have not found any working solution to sign market order successfully on Linux.
+    market data receiving functions work well. Trading is being worked only on
+    Linux and Windows (on Windows native CryptoAPI is used for order signing,
+    on Linux CryptoAPI ported by cryptopro is used [please, see src/ADCryptoAPI.cpp
+    for details]).
 
-    AlfaDirectAPI is still in alpha, so even on Windows trading is broken (actually,
-    order template must be correctly filled in, signed and sent to broker, and this
-    is almost coded)
+    AlfaDirectAPI is still in alpha, so even on Linux and Windows trading is partially
+    broken.
 
 AUTHOR
     Roman Pen
@@ -26,7 +26,7 @@ SUPPORT
 
 ACKNOWLEDGEMENTS
 COPYRIGHT & LICENSE
-    Copyright 2009-2011 Roman Pen
+    Copyright 2009-2012 Roman Pen
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of either: the GNU General Public License as published

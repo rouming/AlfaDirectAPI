@@ -75,7 +75,7 @@ win32:LIBS += -lAdvapi32  -lCrypt32
 RESOURCES += $$LEVEL/AlfaDirectAPI.qrc
 
 # Include ADAPIServer resources for any Unix.
-# Unix we must use special server which loads
+# For Unix we must use special server which loads
 # ADAPI.dll (AlfaDirect black box API) with wine,
 # and we include this server as resources to
 # bootstrap and run process on AD connect.

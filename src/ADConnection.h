@@ -603,6 +603,7 @@ private:
 };
 
 #include <QSslCertificate>
+#include <QSslError>
 
 class QNetworkReply;
 class QAuthenticator;
@@ -619,6 +620,8 @@ public:
 public slots:
     void onAuthRequired ( QNetworkReply* reply,
                           QAuthenticator* auth );
+    void onSslErrors ( QNetworkReply* reply,
+                       const QList<QSslError>& list );
 
 private:
     QSslCertificate m_peerCert;

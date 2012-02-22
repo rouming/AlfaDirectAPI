@@ -276,6 +276,10 @@ static ADConnection::Error ADSendHttpsRequest (
                      SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)),
                      &certVerifier,
                      SLOT(onAuthRequired(QNetworkReply*,QAuthenticator*)));
+    QObject::connect(&net,
+                     SIGNAL(sslErrors(QNetworkReply*,const QList<QSslError>&)),
+                     &certVerifier,
+                     SLOT(onSslErrors(QNetworkReply*,const QList<QSslError>&)));
 
     QNetworkRequest request = QNetworkRequest(url);
 
@@ -486,6 +490,13 @@ void ADCertificateVerifier::onAuthRequired ( QNetworkReply* reply,
 
     auth->setUser( m_login );
     auth->setPassword( m_passwd );
+}
+
+void ADCertificateVerifier::onSslErrors ( QNetworkReply*,
+                                          const QList<QSslError>& list )
+{
+    foreach ( const QSslError& err, list )
+        qWarning("SSL ERROR: %s", qPrintable(err.errorString()));
 }
 
 /****************************************************************************/

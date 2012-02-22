@@ -3,7 +3,7 @@ INCLUDEPATH += \
                $$PWD/ADAPI/include
 
 QMAKE_LIBDIR += $$PWD/build
-QMAKE_RPATHDIR += $$PWD/build
+unix:QMAKE_LFLAGS += -Wl,-rpath,$$PWD/build
 
 LIBS += -lAlfaDirectAPI
 

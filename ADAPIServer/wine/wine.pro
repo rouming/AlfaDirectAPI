@@ -28,6 +28,6 @@ SOURCES = \
           $$LEVEL/src/ADLocalLibrary.cpp \
           $$LEVEL/src/ADDynaLoader.cpp
 
-QMAKE_RPATHDIR += $$DESTDIR
+QMAKE_LFLAGS += -Wl,-rpath,$$DESTDIR
 
 DEFINED -= _LIN_=1

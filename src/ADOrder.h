@@ -15,8 +15,10 @@ class ADOrderPrivate
 public:
     ADOrderPrivate ();
     ADOrderPrivate ( const QString& accCode,
+                     const QString& market,
                      ADConnection::Order::Type,
-                     const QString& paperCode, quint32 qty, float price,
+                     int paperNo, const QString& paperCode,
+                     quint32 qty, float price,
                      const QDateTime& dropDt = QDateTime(),
                      ADConnection::Order::OrderId orderId = 0);
 
@@ -37,13 +39,17 @@ public:
     quint32 updateTradesQty ( quint32 );
 
     QString getAccountCode () const;
+    QString getMarket () const;
     ADConnection::Order::State getOrderState () const;
     ADConnection::Order::Type getOrderType () const;
     quint32 getOrderQty () const;
     float getOrderPrice () const;
     QString getOrderPaperCode () const;
-    quint32 getOrderPaperNo () const;
+    int getOrderPaperNo () const;
     QDateTime getOrderDropDateTime () const;
+
+    void setOrderPaperCode ( const QString& );
+    void setMarket ( const QString& );
 
 private:
     quint32 _getExecutedQty () const;
@@ -54,10 +60,11 @@ private:
     ADConnection::Order::State m_state;
     ADConnection::Order::Type m_type;
     QString m_accCode;
+    QString m_market;
     quint32 m_qty;
     float m_price;
     QString m_paperCode;
-    quint32 m_paperNo;
+    int m_paperNo;
     QDateTime m_dropDt;
     quint32 m_preQty;
     float m_prePrice;

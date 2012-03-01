@@ -142,6 +142,9 @@ public:
         /** Returns account code */
         QString getAccountCode () const;
 
+        /** Returns market */
+        QString getMarket () const;
+
         /** Returns order state */
         State getOrderState () const;
 
@@ -158,7 +161,7 @@ public:
         QString getOrderPaperCode () const;
 
         /** Returns order paper no */
-        quint32 getOrderPaperNo () const;
+        int getOrderPaperNo () const;
 
         /** Returns drop timestamp */
         QDateTime getOrderDropDateTime () const;
@@ -194,6 +197,8 @@ public:
         Quote ();
 
         int paperNo;
+        QString paperCode;
+        QString market;
         float lastPrice;
 
         float getBestSeller () const;
@@ -224,11 +229,14 @@ public:
     struct Position
     {
         Position ();
-        Position ( const QString& accCode, int paperNo,
-                   const QString& paperCode, qint32 qty, float price,
-                   float varMargin );
+        Position ( const QString& accCode, const QString& market,
+                   int paperNo, const QString& paperCode,
+                   qint32 qty, float price, float varMargin );
+
+        bool isMoney () const;
 
         QString accCode;
+        QString market;
         int paperNo;
         QString paperCode;
         qint32 qty;
@@ -258,7 +266,8 @@ public:
 
         class Options {
         public:
-            Options ( const QSet<int>&, quint32 subscrType, quint32 subscrTypeReceive,
+            Options ( const QSet<int>&, quint32 subscrType,
+                      quint32 subscrTypeReceive,
                       quint32 minDelay = 0 );
 
         private:
@@ -359,13 +368,16 @@ public:
                                    Request& request );
 
     bool getQuote ( int paperNo, Quote& quote ) const;
-    bool getPosition ( const QString& acc, const QString& paperCode, Position& ) const;
-    bool findFutures ( const QString& futCode, ADFutures& fut );
-    bool findPaperNo ( const QString& papCode, bool usingArchive, int& paperNo );
+    bool getPositions ( QList<Position>& ) const;
+    bool getPosition ( const QString& accCode, int paperNo, Position& ) const;
+    bool findFutures ( const QString& market,
+                       const QString& futCode, ADFutures& fut );
+    bool findPaperNo ( const QString& market,
+                       const QString& papCode, bool usingArchive, int& paperNo );
 
     /// Trade operations
     Order::Operation tradePaper ( Order&, const QString& accCode,
-                                  Order::Type, const QString& code, quint32 qty, float price );
+                                  Order::Type, int paperNo, quint32 qty, float price );
     Order::Operation cancelOrder ( Order );
     Order::Operation changeOrder ( Order, quint32 qty, float price );
 
@@ -392,7 +404,7 @@ signals:
     void onDataReceived ( ADConnection::DataBlock );
     void onQuoteReceived ( int paperNo, ADConnection::Subscription::Type );
     void onHistoricalQuotesReceived ( ADConnection::Request, QVector<ADConnection::HistoricalQuote> );
-    void onPositionChanged ( QString accCode, QString paperCode, int paperNo );
+    void onPositionChanged ( QString accCode, int paperNo );
     void onOrderStateChanged ( ADConnection::Order,
                                ADConnection::Order::State oldState,
                                ADConnection::Order::State newState );
@@ -403,8 +415,8 @@ signals:
 
     void onWriteToSock ( QByteArray );
 
-    void onFindFutures ( const QString&, ADFutures*, bool* );
-    void onFindPaperNo ( const QString&, bool, int*, bool* );
+    void onFindFutures ( const QString&, const QString&, ADFutures*, bool* );
+    void onFindPaperNo ( const QString&, const QString&, bool, int*, bool* );
     void onTradePaper ( ADConnection::Order::Operation op );
     void onCancelOrder ( ADConnection::Order::Operation op );
     void onChangeOrder ( ADConnection::Order::Operation op,
@@ -451,12 +463,13 @@ private:
                         QHash<QString, QHash<QString, int> >() );
 
     // SQL helpers
-    void _sqlFindFutures ( const QString& futCode, ADFutures& fut, bool& found );
-    void _sqlFindPaperNo ( const QString& papCode, bool usingArchive, int& paperNo, bool& found );
-    bool _sqlFindActiveOrders ( const QString& accCode, const QString& paperCode,
-                                QList< ADSmartPtr<ADOrderPrivate> >& );
-    bool _sqlGetCurrentPosition ( const QString& accCode, const QString& paperCode,
-                                  Position& );
+    void _sqlFindFutures ( const QString& market,
+                           const QString& futCode, ADFutures& fut, bool& found );
+    void _sqlFindPaperNo ( const QString& market,
+                           const QString& papCode, bool usingArchive, int& paperNo,
+                           bool& found );
+    bool _sqlFindActiveOrders ( QList< ADSmartPtr<ADOrderPrivate> >& );
+    bool _sqlGetCurrentPositions ( QList<Position>& );
     bool _sqlGetDBSchema ( QHash<QString, QStringList>& );
     bool _sqlExecSelect ( const QString& tableName,
                          const QMap<QString, QVariant>& search,
@@ -522,7 +535,7 @@ private:
     QDateTime m_srvTime;
     QDateTime m_srvTimeUpdate;
     QHash<int, Quote> m_quotes;
-    QHash<QString, QHash<QString, Position> > m_positions;
+    QHash<QString, QHash<int, Position> > m_positions;
     typedef QPair<ADSmartPtr<ADOrderOperationPrivate>, int> OrderOpWithPhase;
     QHash<RequestId, OrderOpWithPhase>* m_ordersOperations;
     QHash<RequestId, ADSmartPtr<RequestDataPrivate> >* m_requests;
@@ -578,8 +591,8 @@ public:
     SQLReceiver ( class ADConnection* conn );
 
 public slots:
-    void sqlFindFutures ( const QString&, ADFutures*, bool* ret );
-    void sqlFindPaperNo ( const QString&, bool, int*, bool* ret );
+    void sqlFindFutures ( const QString&, const QString&, ADFutures*, bool* ret );
+    void sqlFindPaperNo ( const QString&, const QString&, bool, int*, bool* ret );
     void sqlLogQuote ( ADSmartPtr<ADConnection::LogParam> );
 
 private:

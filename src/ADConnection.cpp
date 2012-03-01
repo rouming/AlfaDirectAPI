@@ -229,16 +229,22 @@ ADConnection::Position::Position () :
     varMargin(0.0)
 {}
 
-ADConnection::Position::Position ( const QString& accCode_, int paperNo_,
-                                   const QString& paperCode_, qint32 qty_,
-                                   float price_, float margin_ ) :
+ADConnection::Position::Position ( const QString& accCode_, const QString& market_,
+                                   int paperNo_, const QString& paperCode_,
+                                   qint32 qty_, float price_, float margin_ ) :
     accCode(accCode_),
+    market(market_),
     paperNo(paperNo_),
     paperCode(paperCode_),
     qty(qty_),
     price(price_),
     varMargin(margin_)
 {}
+
+bool ADConnection::Position::isMoney () const
+{
+    return paperCode == "money";
+}
 
 ADConnection::LogParam::LogParam ( bool updateType_, const QDateTime& nowDt_,
                                    const ADFutures& fut_, const ADConnection::Quote& futQuote_,
@@ -389,20 +395,22 @@ SQLReceiver::SQLReceiver ( ADConnection* conn ) :
     m_conn(conn)
 {}
 
-void SQLReceiver::sqlFindFutures ( const QString& paperCode,
+void SQLReceiver::sqlFindFutures ( const QString& market,
+                                   const QString& paperCode,
                                    ADFutures* fut, bool* ret )
 {
     Q_ASSERT(fut && ret);
-    m_conn->_sqlFindFutures( paperCode, *fut, *ret );
+    m_conn->_sqlFindFutures( market, paperCode, *fut, *ret );
 }
 
-void SQLReceiver::sqlFindPaperNo ( const QString& paperCode,
+void SQLReceiver::sqlFindPaperNo ( const QString& market,
+                                   const QString& paperCode,
                                    bool usingArchive,
                                    int* paperNo,
                                    bool* ret )
 {
     Q_ASSERT(paperNo && ret);
-    m_conn->_sqlFindPaperNo( paperCode, usingArchive, *paperNo, *ret );
+    m_conn->_sqlFindPaperNo( market, paperCode, usingArchive, *paperNo, *ret );
 }
 
 void SQLReceiver::sqlLogQuote ( ADSmartPtr<ADConnection::LogParam> l )
@@ -1050,32 +1058,35 @@ bool ADConnection::getQuote ( int paperNo, ADConnection::Quote& quote ) const
     return _getQuote(paperNo, quote);
 }
 
-bool ADConnection::getPosition ( const QString& acc,
-                                 const QString& paperCode,
+bool ADConnection::getPosition ( const QString& accCode,
+                                 int paperNo,
                                  Position& pos ) const
 {
     // Lock
     QReadLocker readLocker( &m_rwLock );
-    if ( ! m_positions.contains(acc) || ! m_positions[acc].contains(paperCode) )
+    if ( ! m_positions.contains(accCode) ||
+         ! m_positions[accCode].contains(paperNo) )
         return false;
-    pos = m_positions[acc][paperCode];
+    pos = m_positions[accCode][paperNo];
     return true;
 }
 
-bool ADConnection::findFutures ( const QString& futCode, ADFutures& fut )
+bool ADConnection::findFutures ( const QString& market,
+                                 const QString& futCode, ADFutures& fut )
 {
     bool res = false;
     if ( QThread::currentThread() == this ) {
-        _sqlFindFutures(futCode, fut, res);
+        _sqlFindFutures(market, futCode, fut, res);
         return res;
     }
     else {
-        emit onFindFutures(futCode, &fut, &res);
+        emit onFindFutures(market, futCode, &fut, &res);
         return res;
     }
 }
 
-void ADConnection::_sqlFindFutures ( const QString& futCode,
+void ADConnection::_sqlFindFutures ( const QString& market,
+                                     const QString& futCode,
                                      ADFutures& fut,
                                      bool& found )
 {
@@ -1093,36 +1104,41 @@ void ADConnection::_sqlFindFutures ( const QString& futCode,
 
     QSqlQuery query( m_adDB );
     const QString sql =
-        "SELECT papers.\"paper_no\", "
-        "                 papers.\"p_code\", "
-        "                 papers.\"mat_date\", "
-        "                 actives.\"strike\", "
-        "                 actives.\"at_code\" "
-        "FROM (SELECT \"paper_no\" "
-        "                       FROM AD_PAPERS WHERE \"p_code\" = :p_code) AS future, "
-        "               AD_ACTIVES AS actives, "
-        "               AD_PAPERS AS papers "
+        "SELECT "
+        "       papers.\"paper_no\", "
+        "       papers.\"p_code\", "
+        "       papers.\"mat_date\", "
+        "       actives.\"strike\", "
+        "       actives.\"at_code\" "
+        "FROM "
+        "       (SELECT \"paper_no\" "
+        "        FROM AD_PAPERS WHERE \"p_code\" = :p_code AND "
+        "                             \"place_code\" = :place_code) AS future, "
+        "       AD_ACTIVES AS actives, "
+        "       AD_PAPERS AS papers "
         "WHERE "
-        "               (papers.\"paper_no\" = future.\"paper_no\" OR "
-        "                papers.\"base_paper_no\" = future.\"paper_no\") AND "
-        "                papers.\"p_code\" = actives.\"p_code\" AND "
-        "                papers.\"expired\" = 'N' AND "
-        "               (actives.\"at_code\" like 'F%' OR "
-        "                actives.\"at_code\" = 'OC' OR "
-        "                actives.\"at_code\" = 'OP' OR "
-        "                actives.\"at_code\" = 'OCM' OR "
-        "                actives.\"at_code\" = 'OPM') AND "
-        "                papers.\"mat_date\" >= CURRENT_TIMESTAMP "
+        "       (papers.\"paper_no\" = future.\"paper_no\" OR "
+        "        papers.\"base_paper_no\" = future.\"paper_no\") AND "
+        "       papers.\"p_code\" = actives.\"p_code\" AND "
+        "       papers.\"expired\" = 'N' AND "
+        "       (actives.\"at_code\" like 'F%' OR "
+        "        actives.\"at_code\" = 'OC' OR "
+        "        actives.\"at_code\" = 'OP' OR "
+        "        actives.\"at_code\" = 'OCM' OR "
+        "        actives.\"at_code\" = 'OPM') AND "
+        "       papers.\"mat_date\" >= CURRENT_TIMESTAMP "
         "ORDER BY "
-        "                papers.\"mat_date\" DESC, "
-        "                actives.\"strike\", "
-        "                actives.\"at_code\" ";
+        "       papers.\"mat_date\" DESC, "
+        "       actives.\"strike\", "
+        "       actives.\"at_code\" ";
 
     // Execute query
     query.prepare( sql );
     query.bindValue(":p_code", futCode);
+    query.bindValue(":place_code", market);
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         found = false;
         return;
     }
@@ -1243,22 +1259,24 @@ void ADConnection::_sqlFindFutures ( const QString& futCode,
     found = (fut.paperNo != 0);
 }
 
-bool ADConnection::findPaperNo ( const QString& papCode,
+bool ADConnection::findPaperNo ( const QString& market,
+                                 const QString& papCode,
                                  bool usingArchive,
                                  int& paperNo )
 {
     bool res = false;
     if ( QThread::currentThread() == this ) {
-        _sqlFindPaperNo(papCode, usingArchive, paperNo, res);
+        _sqlFindPaperNo(market, papCode, usingArchive, paperNo, res);
         return res;
     }
     else {
-        emit onFindPaperNo(papCode, usingArchive, &paperNo, &res);
+        emit onFindPaperNo(market, papCode, usingArchive, &paperNo, &res);
         return res;
     }
 }
 
-void ADConnection::_sqlFindPaperNo ( const QString& papCode,
+void ADConnection::_sqlFindPaperNo ( const QString& market,
+                                     const QString& papCode,
                                      bool usingArchive,
                                      int& paperNo,
                                      bool& found )
@@ -1279,17 +1297,24 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
     QSqlQuery query( m_adDB );
     const QString sql =
         " SELECT \"paper_no\" FROM AD_PAPERS AS papers "
-        "    WHERE \"p_code\" LIKE ? "
+        "    WHERE "
+        "          \"p_code\" LIKE ? AND "
+        "          \"place_code\" LIKE ? "
         "      UNION "
         " SELECT \"paper_no\" FROM AD_ARCHIVE_PAPERS AS arch_papers "
-        "    WHERE \"p_code\" LIKE ? ";
+        "    WHERE "
+        "          \"p_code\" LIKE ? AND "
+        "          \"place_code\" LIKE ? ";
 
     // Execute query
     query.prepare( sql );
     query.addBindValue(papCode);
+    query.addBindValue(market);
     query.addBindValue(papCode);
+    query.addBindValue(market);
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         found = false;
         return;
     }
@@ -1355,7 +1380,7 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
                                    placeCode, placeName, unused, expired,
                                    boardCode, atCode, matDate );
 
-            if ( ! found && papCode == realPapCode ) {
+            if ( ! found && papCode == realPapCode && placeCode == market ) {
                 paperNo = realPapNo;
                 found = true;
             }
@@ -1363,9 +1388,8 @@ void ADConnection::_sqlFindPaperNo ( const QString& papCode,
     }
 }
 
-bool ADConnection::_sqlFindActiveOrders ( const QString& accCode,
-                                          const QString& paperCode,
-                                          QList< ADSmartPtr<ADOrderPrivate> >& orders )
+bool ADConnection::_sqlFindActiveOrders (
+    QList< ADSmartPtr<ADOrderPrivate> >& orders )
 {
     Q_ASSERT(QThread::currentThread() == this);
 
@@ -1378,29 +1402,34 @@ bool ADConnection::_sqlFindActiveOrders ( const QString& accCode,
 
     QSqlQuery query( m_adDB );
     const QString sql =
-        "SELECT orders.\"ord_no\", "
-        "                 orders.\"status\", "
-        "                 orders.\"b_s\", "
-        "                 orders.\"price\", "
-        "                 orders.\"qty\", "
-        "                 orders.\"p_code\", "
-        "                 orders.\"drop_time\" "
-        "FROM AD_ORDERS as orders "
+        "SELECT "
+        "       orders.\"ord_no\", "
+        "       orders.\"status\", "
+        "       orders.\"b_s\", "
+        "       orders.\"price\", "
+        "       orders.\"qty\", "
+        "       orders.\"p_code\", "
+        "       orders.\"drop_time\", "
+        "       orders.\"acc_code\", "
+        "       orders.\"place_code\", "
+        "       papers.\"paper_no\" "
+        "FROM "
+        "       AD_ORDERS as orders, "
+        "       AD_PAPERS as papers "
         "WHERE "
-        "     orders.\"acc_code\" = :acc_code AND "
-        "     orders.\"p_code\" = :p_code AND "
-        "               (orders.\"status\" = 'O' OR "
-        "      orders.\"status\" = 'X' OR "
-        "      orders.\"status\" = 'N') "
+        "       papers.\"p_code\" = orders.\"p_code\" AND "
+        "       papers.\"place_code\" = orders.\"place_code\" AND "
+        "       (orders.\"status\" = 'O' OR "
+        "        orders.\"status\" = 'X' OR "
+        "        orders.\"status\" = 'N') "
         "ORDER BY "
-        "                orders.\"ord_no\" ";
+        "       orders.\"ord_no\" ";
 
     // Execute query
     query.prepare( sql );
-    query.bindValue(":acc_code", accCode);
-    query.bindValue(":p_code", paperCode);
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         return false;
     }
 
@@ -1413,18 +1442,21 @@ bool ADConnection::_sqlFindActiveOrders ( const QString& accCode,
         int qty = query.value(4).toInt();
         QString paperCode = query.value(5).toString();
         QDateTime dropDt = query.value(6).toDateTime();
+        QString accCode = query.value(7).toString();
+        QString market = query.value(8).toString();
+        int paperNo = query.value(9).toInt();
 
         Order::Type orderBS = (b_s == "S" ? Order::Sell : Order::Buy);
-        ADSmartPtr<ADOrderPrivate> order( new ADOrderPrivate(accCode, orderBS, paperCode, qty, price, dropDt, orderNo) );
+        ADSmartPtr<ADOrderPrivate> order(
+            new ADOrderPrivate(accCode, market, orderBS, paperNo, paperCode,
+                               qty, price, dropDt, orderNo) );
         if ( order.isValid() )
             orders.append(order);
     }
     return (orders.size() > 0);
 }
 
-bool ADConnection::_sqlGetCurrentPosition ( const QString& accCode,
-                                            const QString& paperCode,
-                                            ADConnection::Position& position )
+bool ADConnection::_sqlGetCurrentPositions ( QList<Position>& positions )
 {
     Q_ASSERT(QThread::currentThread() == this);
 
@@ -1432,23 +1464,21 @@ bool ADConnection::_sqlGetCurrentPosition ( const QString& accCode,
 
     QSqlQuery query( m_adDB );
     const QString sql =
-        "SELECT pos.\"acc_code\", "
-        "                 pos.\"p_code\", "
-        "                 pos.\"paper_no\", "
-        "                 pos.\"real_rest\", "
-        "                 pos.\"balance_price\", "
-        "                 pos.\"var_margin\" "
-        "FROM AD_BALANCE as pos "
-        "WHERE "
-        "     pos.\"acc_code\" = :acc_code AND "
-        "     pos.\"p_code\" = :p_code ";
+        "SELECT "
+        "       pos.\"acc_code\", "
+        "       pos.\"p_code\", "
+        "       pos.\"place_code\", "
+        "       pos.\"paper_no\", "
+        "       pos.\"real_rest\", "
+        "       pos.\"balance_price\", "
+        "       pos.\"var_margin\" "
+        "FROM AD_BALANCE as pos ";
 
     // Execute query
     query.prepare( sql );
-    query.bindValue(":acc_code", accCode);
-    query.bindValue(":p_code", paperCode);
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         return false;
     }
 
@@ -1456,16 +1486,17 @@ bool ADConnection::_sqlGetCurrentPosition ( const QString& accCode,
     while ( query.next() ) {
         QString accCode = query.value(0).toString();
         QString paperCode = query.value(1).toString();
-        int paperNo = query.value(2).toInt();
-        float realRest = query.value(3).toDouble();
-        float balancePrice = query.value(4).toDouble();
-        float varMargin = query.value(5).toDouble();
+        QString market = query.value(2).toString();
+        int paperNo = query.value(3).toInt();
+        float realRest = query.value(4).toDouble();
+        float balancePrice = query.value(5).toDouble();
+        float varMargin = query.value(6).toDouble();
 
-        position = Position(accCode, paperNo, paperCode, static_cast<int>(realRest),
-                            balancePrice, varMargin);
+        positions.append(Position(accCode, market, paperNo, paperCode,
+                                  static_cast<int>(realRest),
+                                  balancePrice, varMargin));
 
         found = true;
-        break;
     }
     return found;
 }
@@ -1516,7 +1547,8 @@ bool ADConnection::_sqlExecSelect (
     }
 
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         return false;
     }
 
@@ -1919,11 +1951,12 @@ void ADConnection::cancelOrder ( ADConnection::Order::Operation op )
     }
 }
 
-ADConnection::Order::Operation ADConnection::tradePaper ( ADConnection::Order& orderOut,
-                                                          const QString& accCode,
-                                                          ADConnection::Order::Type tradeType,
-                                                          const QString& code,
-                                                          quint32 qty, float price )
+ADConnection::Order::Operation ADConnection::tradePaper (
+    ADConnection::Order& orderOut,
+    const QString& accCode,
+    ADConnection::Order::Type tradeType,
+    int paperNo,
+    quint32 qty, float price )
 {
     // Lock
     QWriteLocker wLocker( &m_rwLock );
@@ -1932,11 +1965,13 @@ ADConnection::Order::Operation ADConnection::tradePaper ( ADConnection::Order& o
     RequestId reqId = ++m_reqId;
 
     // Create order
-    ADSmartPtr<ADOrderPrivate> orderPtr( new ADOrderPrivate(accCode, tradeType, code, qty, price) );
+    ADSmartPtr<ADOrderPrivate> orderPtr(
+        new ADOrderPrivate(accCode, "", tradeType, paperNo, "", qty, price) );
 
     // Create order operation
     ADSmartPtr<ADOrderOperationPrivate> op(
-                                         new ADOrderOperationPrivate(reqId, ADConnection::Order::CreateOrder, orderPtr) );
+        new ADOrderOperationPrivate(reqId, ADConnection::Order::CreateOrder,
+                                    orderPtr) );
 
     // Save drop request
     m_ordersOperations->insert(reqId, OrderOpWithPhase(op, 0));
@@ -1972,10 +2007,6 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
     Q_ASSERT(order.isValid());
     ADConnection::RequestId reqId = op.m_op->getRequestId();
 
-    //XXX
-    QString accCode = "13272-000";
-    QString placeCode = "FORTS";
-
     ADTemplateParser dp;
     QSqlQuery query;
     QMap<QString, QVariant> where;
@@ -1988,6 +2019,19 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
     bool res = false;
     unsigned int size = 0;
     char* data = 0;
+
+    // Get paper code and place code (market)
+    where.insert("paper_no", order->getOrderPaperNo());
+    if ( !_sqlExecSelect("AD_PAPERS", where, query) || !query.next() ) {
+        goto err;
+    }
+    where.clear();
+
+    row = query.record();
+
+    // Set paper code and place code (market)
+    order->setOrderPaperCode(row.value("p_code").toString());
+    order->setMarket(row.value("place_code").toString());
 
     // Get new_order template
     where.insert("doc_id", "new_order");
@@ -2005,8 +2049,8 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
 
     dp.addParam("blank", "L");
     dp.addParam("b_s", (order->getOrderType() == Order::Buy ? "B" : "S"));
-    dp.addParam("acc_code", accCode);
-    dp.addParam("place_code", placeCode);
+    dp.addParam("acc_code", order->getAccountCode());
+    dp.addParam("place_code", order->getMarket());
     dp.addParam("p_code", order->getOrderPaperCode());
     dp.addParam("price_currency", "RUR");
     dp.addParam("limits_check", "Y");
@@ -2017,7 +2061,7 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
 
     // Get papers
     where.insert("p_code", order->getOrderPaperCode());
-    where.insert("place_code", placeCode);
+    where.insert("place_code", order->getMarket());
     if ( !_sqlExecSelect("AD_PAPERS", where, query) || !query.next() ) {
         goto err;
     }
@@ -2038,7 +2082,7 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
     dp.addParam("mat_date", row.value("mat_date").toDateTime().toString("dd/MM/yyyy"));
 
     // Get subbaccount
-    where.insert("acc_code", accCode);
+    where.insert("acc_code", order->getAccountCode());
     if ( !_sqlExecSelect("AD_SUB_ACCOUNTS", where, query) || !query.next() ) {
         goto err;
     }
@@ -2071,7 +2115,7 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
 
 
     // Get trade_places
-    where.insert("place_code", placeCode);
+    where.insert("place_code", order->getMarket());
     if ( !_sqlExecSelect("AD_TRADE_PLACES", where, query) || !query.next() ) {
         goto err;
     }
@@ -2093,8 +2137,8 @@ void ADConnection::tradePaper ( ADConnection::Order::Operation op )
     dp.addParam("dp_name", row.value("dp_name").toString().trimmed());
 
     // Get position
-    where.insert("acc_code", accCode);
-    where.insert("place_code", placeCode);
+    where.insert("acc_code", order->getAccountCode());
+    where.insert("place_code", order->getMarket());
     if ( _sqlExecSelect("AD_POSITIONS", where, query) && query.next() ) {
         row = query.record();
         if ( row.contains("depo_account") &&
@@ -2296,7 +2340,8 @@ bool ADConnection::sqlLogQuote ( bool isFutUpdate, const QDateTime& nowDt,
     query.bindValue(":opt_buy_impl_vol", buy_impl_vol);
 
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         return false;
     }
     return true;
@@ -2358,7 +2403,8 @@ bool ADConnection::sqlInsertArchivePaper ( int paperNo, const QString& paperCode
     }
 
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s, SQL: %s",
+        qWarning("SQL ERROR: %s %s, SQL: %s",
+                 __FUNCTION__,
                  qPrintable(query.lastError().text()),
                  qPrintable(query.executedQuery()));
         return false;
@@ -2392,7 +2438,8 @@ bool ADConnection::getCachedTemplateDocument ( const QString& docName,
     query.prepare( sql );
     query.bindValue(":doc_name", docName);
     if ( ! query.exec() ) {
-        qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+        qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                 qPrintable(query.lastError().text()));
         return false;
     }
     if ( query.next() ) {
@@ -2636,7 +2683,8 @@ void ADConnection::run ()
         if ( m_adDB.driverName() == "QMYSQL" ) {
             QSqlQuery ansiModeQuery( m_adDB );
             if ( ! ansiModeQuery.exec("SET sql_mode='ANSI_QUOTES'") ) {
-                qWarning("SQL ERROR: %s", qPrintable(ansiModeQuery.lastError().text()));
+                qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                         qPrintable(ansiModeQuery.lastError().text()));
                 goto clean;
             }
         }
@@ -2681,14 +2729,18 @@ void ADConnection::run ()
     {
         SQLReceiver sqlReceiver( this );
         QObject::connect( this,
-                          SIGNAL(onFindFutures(const QString&, ADFutures*, bool*)),
+                          SIGNAL(onFindFutures(const QString&,
+                                               const QString&, ADFutures*, bool*)),
                           &sqlReceiver,
-                          SLOT(sqlFindFutures(const QString&, ADFutures*, bool*)),
+                          SLOT(sqlFindFutures(const QString&,
+                                              const QString&, ADFutures*, bool*)),
                           Qt::BlockingQueuedConnection );
         QObject::connect( this,
-                          SIGNAL(onFindPaperNo(const QString&, bool, int*, bool*)),
+                          SIGNAL(onFindPaperNo(const QString&,
+                                               const QString&, bool, int*, bool*)),
                           &sqlReceiver,
-                          SLOT(sqlFindPaperNo(const QString&, bool, int*, bool*)),
+                          SLOT(sqlFindPaperNo(const QString&,
+                                              const QString&, bool, int*, bool*)),
                           Qt::BlockingQueuedConnection );
         QObject::connect( this,
                           SIGNAL(onLogQuote(ADSmartPtr<ADConnection::LogParam>)),
@@ -2858,8 +2910,8 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
 
         // Find active orders and insert them
         QList< ADSmartPtr<ADOrderPrivate> > activeOrders;
-        if ( _sqlFindActiveOrders(XXX_portfolio, XXX_paper_code, activeOrders) ) {
-            foreach ( ADSmartPtr<ADOrderPrivate> order, activeOrders ) {
+        if ( _sqlFindActiveOrders(activeOrders) ) {
+            foreach ( const ADSmartPtr<ADOrderPrivate>& order, activeOrders ) {
                 // Lock
                 QWriteLocker wLocker( &m_rwLock );
                 Order::OrderId orderId = order->getOrderId();
@@ -2875,14 +2927,16 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
         }
 
         // Find current position
-        Position position;
-        if ( _sqlGetCurrentPosition(XXX_portfolio, XXX_paper_code, position) ) {
-            // Lock
-            QWriteLocker wLocker( &m_rwLock );
-            m_positions[position.accCode][position.paperCode] = position;
-            // Unlock
-            wLocker.unlock();
-            emit onPositionChanged( position.accCode, position.paperCode, position.paperNo );
+        QList<Position> positions;
+        if ( _sqlGetCurrentPositions(positions) ) {
+            foreach ( const Position& pos, positions ) {
+                // Lock
+                QWriteLocker wLocker( &m_rwLock );
+                m_positions[pos.accCode][pos.paperNo] = pos;
+                // Unlock
+                wLocker.unlock();
+                emit onPositionChanged( pos.accCode, pos.paperNo );
+            }
         }
 
         return;
@@ -3353,6 +3407,7 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                     continue;
                 }
 
+                QString market = cols[13];
                 QString paperCode = cols[14];
                 QDateTime dropDt = QDateTime::fromString( cols[28], "dd/MM/yyyy hh:mm:ss" );
                 if ( ! ok ) {
@@ -3360,6 +3415,20 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                     continue;
                 }
                 Order::Type orderBS = (b_s == "S" ? Order::Sell : Order::Buy);
+
+                // Get paper no
+                QSqlQuery query;
+                QMap<QString, QVariant> where;
+                where.insert("p_code", paperCode);
+                where.insert("place_code", market);
+                if ( !_sqlExecSelect("AD_PAPERS", where, query) || !query.next() ) {
+                    qWarning("Error: new order failed! can't find paper by "
+                             "p_code '%s' and place_code '%s'",
+                             qPrintable(paperCode),
+                             qPrintable(market));
+                    continue;
+                }
+                int paperNo = query.record().value("paper_no").toInt();
 
                 // Lock
                 QWriteLocker wLocker( &m_rwLock );
@@ -3375,8 +3444,10 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                     // If order newly created
                     if ( ! m_activeOrders->contains(orderId) ) {
                         newlyAccepted = true;
-                        order = ADSmartPtr<ADOrderPrivate>( new ADOrderPrivate(accCode, orderBS, paperCode, qty,
-                                                                             price, dropDt, orderId) );
+                        order = ADSmartPtr<ADOrderPrivate>(
+                            new ADOrderPrivate(accCode, market, orderBS, paperNo,
+                                               paperCode, qty, price, dropDt,
+                                               orderId) );
                         m_activeOrders->insert(orderId, order);
                         order->setOrderState( Order::AcceptedState );
                     }
@@ -3618,6 +3689,7 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
 
                 QString accCode = cols[0];
                 QString paperCode = cols[1];
+                QString market = cols[2];
                 float realRest = cols[4].toDouble(&ok);
                 if ( ! ok ) {
                     qWarning("Wrong block line: can't parse realRest from balance line!");
@@ -3639,15 +3711,16 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                     continue;
                 }
 
-                Position position(accCode, paperNo, paperCode, static_cast<int>(realRest),
+                Position position(accCode, market, paperNo, paperCode,
+                                  static_cast<int>(realRest),
                                   balancePrice, varMargin);
 
                 // Lock
                 QWriteLocker wLocker( &m_rwLock );
-                m_positions[accCode][paperCode] = position;
+                m_positions[accCode][paperNo] = position;
                 // Unlock
                 wLocker.unlock();
-                emit onPositionChanged( position.accCode, position.paperCode, position.paperNo );
+                emit onPositionChanged( position.accCode, position.paperNo );
             }
         }
         // Historical quotes
@@ -3894,7 +3967,8 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
                     query.bindValue(i + colsValues.size(), var);
             }
             if ( ! query.exec() ) {
-                qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+                qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                         qPrintable(query.lastError().text()));
                 qWarning("SQL QUERY (block name=%s, cols size=%d): #%s#\n",
                          qPrintable(blockName),
                          cols.size(),
@@ -3940,7 +4014,8 @@ void ADConnection::getADLastSimpleFilterUpdates ( QHash<QString, int>&  lastUpda
         sql = sql.arg(AD_DB_PREFIX + simpleFilter.toUpper());
         QSqlQuery query( m_adDB );
         if ( ! query.exec(sql) ) {
-            qWarning("SQL ERROR: %s", qPrintable(query.lastError().text()));
+            qWarning("SQL ERROR: %s %s", __FUNCTION__,
+                     qPrintable(query.lastError().text()));
             lastUpdates[simpleFilter] = 0;
         }
         else {

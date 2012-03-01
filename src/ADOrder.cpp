@@ -17,18 +17,21 @@ ADOrderPrivate::ADOrderPrivate () :
 {}
 
 ADOrderPrivate::ADOrderPrivate ( const QString& accCode,
+                                 const QString& market,
                                  ADConnection::Order::Type t,
-                                 const QString& pCode, quint32 qty,
+                                 int paperNo, const QString& paperCode,
+                                 quint32 qty,
                                  float price, const QDateTime& dropDt,
                                  ADConnection::Order::OrderId orderId ) :
     m_orderId(orderId),
     m_state(ADConnection::Order::UnknownState),
     m_type(t),
     m_accCode(accCode),
+    m_market(market),
     m_qty(qty),
     m_price(price),
-    m_paperCode(pCode),
-    m_paperNo(0),
+    m_paperCode(paperCode),
+    m_paperNo(paperNo),
     m_dropDt(dropDt),
     m_preQty(0),
     m_prePrice(0.0),
@@ -146,6 +149,9 @@ quint32 ADOrderPrivate::updateTradesQty ( quint32 tradesQty )
 QString ADOrderPrivate::getAccountCode () const
 { return m_accCode; }
 
+QString ADOrderPrivate::getMarket () const
+{ return m_market; }
+
 ADConnection::Order::State ADOrderPrivate::getOrderState () const
 {
     //Lock
@@ -181,7 +187,7 @@ QString ADOrderPrivate::getOrderPaperCode () const
     return m_paperCode;
 }
 
-quint32 ADOrderPrivate::getOrderPaperNo () const
+int ADOrderPrivate::getOrderPaperNo () const
 {
     //Lock
     QMutexLocker locker( &m_mutex );
@@ -193,6 +199,20 @@ QDateTime ADOrderPrivate::getOrderDropDateTime () const
     //Lock
     QMutexLocker locker( &m_mutex );
     return m_dropDt;
+}
+
+void ADOrderPrivate::setOrderPaperCode ( const QString& paperCode )
+{
+    //Lock
+    QMutexLocker locker( &m_mutex );
+    m_paperCode = paperCode;
+}
+
+void ADOrderPrivate::setMarket ( const QString& market )
+{
+    //Lock
+    QMutexLocker locker( &m_mutex );
+    m_market = market;
 }
 
 /****************************************************************************/
@@ -259,7 +279,7 @@ bool ADConnection::Order::isValid () const
 bool ADConnection::Order::operator == ( const ADConnection::Order& order ) const
 {
     if ( m_order.isValid() && order.isValid() )
-        return m_order == order.m_order;
+       return m_order == order.m_order;
     else
         return false;
 }
@@ -268,6 +288,13 @@ QString ADConnection::Order::getAccountCode () const
 {
     if ( m_order.isValid() )
         return m_order->getAccountCode();
+    return "";
+}
+
+QString ADConnection::Order::getMarket () const
+{
+    if ( m_order.isValid() )
+        return m_order->getMarket();
     return "";
 }
 
@@ -306,7 +333,7 @@ QString ADConnection::Order::getOrderPaperCode () const
     return "";
 }
 
-quint32 ADConnection::Order::getOrderPaperNo () const
+int ADConnection::Order::getOrderPaperNo () const
 {
     if ( m_order.isValid() )
         return m_order->getOrderPaperNo();

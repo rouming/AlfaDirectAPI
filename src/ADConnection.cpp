@@ -3885,12 +3885,10 @@ void ADConnection::storeDataIntoDB ( const QList<DataBlock>& recv )
             QStringList colsNamesEsc;
             QStringList colsValues;
 
-            if ( cols.size() == 1 ) {
-                qWarning("Error: single column %s for block %s, will skip!",
-                         qPrintable(cols[0]),
-                         qPrintable(blockName));
+            // Strange AD behaviour
+            // Sometimes on connect it sends some streams with single column
+            if ( cols.size() == 1 )
                 continue;
-            }
 
             for ( int i = 0, j = 0; j < cols.size() && i < tableFields.size(); ++i ) {
                 if ( isHistQuotesStream && tableFields[i] == histQuotes_timeFrameKey )

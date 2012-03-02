@@ -30,6 +30,9 @@
 // Log everything to file!
 #define DO_ALL_LOGGING 1
 
+// Debug orders states
+//#define DEBUG_ORDERS
+
 namespace
 {
     static const QString AD_DB_PREFIX("AD_");
@@ -3141,32 +3144,63 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
 
             // Check order creation
             if ( orderPhasePtr.first->getOperationType() == Order::CreateOrder ) {
+
+                QRegExp phase1("^OK$");
+                QRegExp phase2(
+                    QString::fromUtf8("^Заявка принята к исполнению$"));
+                QRegExp phase3(
+                    QString::fromUtf8("принята Системой.$|"
+                                      "^Установка тестовой сделки по заявке № (\\d+)"));
+
                 // Handle broker sucess response for 0 phase
                 if ( orderPhasePtr.second == 0 &&
-                     cols[1].contains(QRegExp("^OK$")) ) {
+                     cols[1].contains(phase1) ) {
                     orderPhasePtr.second = 1;
+#ifdef DEBUG_ORDERS
+                    qWarning("Order creation #%d, price %.2f is in phase 1, '%s'",
+                             id, orderPhasePtr.first->getOrder()->getOrderPrice(),
+                             qPrintable(cols[1]));
+#endif
                     continue;
                 }
                 // Handle broker sucess response for 1 phase
                 else if ( orderPhasePtr.second == 1 &&
-                          cols[1].contains(QRegExp(QString::fromUtf8("^Заявка принята к исполнению$"))) ) {
+                          cols[1].contains(phase2) ) {
                     orderPhasePtr.second = 2;
+#ifdef DEBUG_ORDERS
+                    qWarning("Order creation #%d is in phase 2, '%s'",
+                             id, qPrintable(cols[1]));
+#endif
                     continue;
                 }
                 // Handle exchange sucess response for 2 phase
                 else if ( orderPhasePtr.second == 2 &&
-                          cols[1].contains(QRegExp(QString::fromUtf8("принята Системой.$"))) ) {
-                    if ( cols.size() < 5 ) {
-                        qWarning("!!!! Response on request id '%d' is wrong!", id);
-                        //XXX I don't know what to do in this case!
-                        goto create_order_error;
+                          cols[1].contains(phase3) ) {
+#ifdef DEBUG_ORDERS
+                    qWarning("Order creation #%d in accept state, '%s'",
+                             id, qPrintable(cols[1]));
+#endif
+                    Order::OrderId orderId;
+
+                    // Check real order
+                    if ( 0 == phase3.captureCount() ) {
+                        if ( cols.size() < 5 ) {
+                            qWarning("Error: response on request id '%d' is wrong!",
+                                     id);
+                            goto create_order_error;
+                        }
+                        orderId = cols[4].toInt(&ok);
                     }
-                    Order::OrderId orderId = cols[4].toInt(&ok);
+                    // Demo order
+                    else
+                        orderId = phase3.cap(1).toInt(&ok);
+
                     if ( ! ok ) {
-                        qWarning("!!!! Response on request id '%d' is wrong!", id);
-                        //XXX I really don't know what to do in this case!
+                        qWarning("Error: response on request id '%d' is wrong, "
+                                 "can't convert order id to int", id);
                         goto create_order_error;
                     }
+
 
                     // Accepted
                     ADSmartPtr<ADOrderOperationPrivate> orderOpPtr = orderPhasePtr.first;
@@ -3194,6 +3228,12 @@ void ADConnection::tcpReadyRead ( QTcpSocket& )
                 // Handle broker other responses (assume errors)
                 else {
                 create_order_error:
+
+#ifdef DEBUG_ORDERS
+                    qWarning("Order #%d in unknown msg, '%s'",
+                             id, qPrintable(cols[1]));
+#endif
+
                     ADSmartPtr<ADOrderOperationPrivate> orderOpPtr = orderPhasePtr.first;
                     ADSmartPtr<ADOrderPrivate> order = orderOpPtr->getOrder();
                     m_ordersOperations->take(id);
